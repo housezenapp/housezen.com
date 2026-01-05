@@ -86,7 +86,14 @@ const router = {
             // Extraer el contenido del body
             const bodyContent = doc.body;
             if (bodyContent) {
-                container.innerHTML = bodyContent.innerHTML;
+                let bodyHTML = bodyContent.innerHTML;
+                
+                // Corregir cualquier ruta relativa que quede en el HTML del body
+                // (por si hay scripts inline o referencias en atributos)
+                bodyHTML = bodyHTML.replace(/href=["']styles\.css["']/g, `href="${basePath}styles.css"`);
+                bodyHTML = bodyHTML.replace(/src=["']js\//g, `src="${basePath}js/`);
+                
+                container.innerHTML = bodyHTML;
             } else {
                 // Fallback: procesar el HTML manualmente
                 container.innerHTML = html;
