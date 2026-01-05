@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Housezen</title>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Housezen">
+    <meta name="theme-color" content="#2A9D8F">
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://img.icons8.com/fluency-systems-filled/192/2A9D8F/home.png">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency-systems-filled/192/2A9D8F/home.png">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="login-page">
+        <div class="login-logo">
+            <i class="fa-solid fa-house-chimney"></i>
+        </div>
+        <h1 class="login-title">Housezen</h1>
+        <p class="login-subtitle">Tu hogar, bajo control</p>
+        <button class="google-btn" onclick="login()">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
+            Acceder con Google
+        </button>
+    </div>
+
+    <!-- Pantalla de Selección de Rol -->
+    <div id="role-selection-page" class="hidden">
+        <div class="role-selection-container">
+            <div class="role-selection-header">
+                <i class="fa-solid fa-user-circle"></i>
+                <h2>Selecciona tu rol</h2>
+                <p>Elige cómo usarás Housezen</p>
+            </div>
+            <div class="role-cards">
+                <div class="role-card" onclick="selectRole('inquilino')">
+                    <div class="role-icon inquilino-icon">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h3>Soy Inquilino</h3>
+                    <p>Reporta incidencias y gestiona tu vivienda</p>
+                </div>
+                <div class="role-card" onclick="selectRole('casero')">
+                    <div class="role-icon casero-icon">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <h3>Soy Propietario</h3>
+                    <p>Gestiona tus propiedades e incidencias</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor de Aplicación (se carga dinámicamente) -->
+    <div id="app-container" class="hidden"></div>
+
+    <div id="toast">
+        <i class="fa-solid fa-circle-info"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

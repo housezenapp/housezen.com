@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="theme-color" content="#14B8A6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Casero Zen">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3159/3159310.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="https://cdn-icons-png.flaticon.com/512/3159/3159310.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="https://cdn-icons-png.flaticon.com/512/3159/3159310.png">
+    
+    <title>Casero Zen - Gestión de Propiedades</title>
+
+    <link rel="manifest" href="manifest.json">
+    
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3159/3159310.png">
+    <link rel="alternate icon" href="https://cdn-icons-png.flaticon.com/512/3159/3159310.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="login-page">
+        <div class="login-logo">
+            <i class="fa-solid fa-building"></i>
+        </div>
+        <h1 class="login-title">Casero Zen</h1>
+        <p class="login-subtitle">Gestión Profesional de Propiedades</p>
+        <button id="btnGoogleLogin" class="auth-btn google-btn">
+            <i class="fa-brands fa-google"></i> Entrar con Google
+        </button>
+    </div>
+
+    <div id="app-content" class="hidden">
+        <div class="top-bar">
+            <button class="menu-btn" id="menuBtn">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="logo-text">
+                <div class="logo-h">H</div>
+                <span>Casero Zen</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-label">Sesión Activa</div>
+                <div class="sidebar-username" id="sidebar-username">Cargando...</div>
+            </div>
+            <div class="nav-item active" data-page="incidencias">
+                <i class="fa-solid fa-list-check"></i> Incidencias
+            </div>
+            <div class="nav-item" data-page="propiedades">
+                <i class="fa-solid fa-building"></i> Mis Propiedades
+            </div>
+            <div class="nav-item" data-page="perfil">
+                <i class="fa-solid fa-user-tie"></i> Mi Perfil
+            </div>
+            <div class="nav-item nav-logout" id="btnLogout">
+                <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+            </div>
+        </nav>
+
+        <div class="menu-overlay" id="menuOverlay"></div>
+
+        <div class="page active" id="page-incidencias">
+            <h2 class="page-title">Incidencias</h2>
+            <div class="stats-grid">
+                <div class="stat-card urgent">
+                    <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="stat-urgent">0</div>
+                        <div class="stat-label">Urgentes</div>
+                    </div>
+                </div>
+                <div class="stat-card pending">
+                    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="stat-pending">0</div>
+                        <div class="stat-label">Nuevas</div>
+                    </div>
+                </div>
+                <div class="stat-card progress">
+                    <div class="stat-icon"><i class="fa-solid fa-gear"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="stat-progress">0</div>
+                        <div class="stat-label">En Proceso</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filters-bar">
+                <select id="filter-estado" class="filter-select">
+                    <option value="">Todos los estados</option>
+                    <option value="Recibida">Recibida</option>
+                    <option value="En Revisión">En Revisión</option>
+                    <option value="Técnico Asignado">Técnico Asignado</option>
+                    <option value="En Curso">En Curso</option>
+                    <option value="Solucionada">Solucionada</option>
+                </select>
+            </div>
+
+            <div id="incidents-logistics-container"></div>
+        </div>
+
+        <div class="page" id="page-propiedades">
+            <h2 class="page-title">Mis Propiedades</h2>
+            <button class="add-btn" id="btnAddProperty">
+                <i class="fa-solid fa-plus"></i> Añadir Propiedad
+            </button>
+            <div id="properties-container"></div>
+        </div>
+
+        <div class="page" id="page-perfil">
+            <h2 class="page-title">Configuración de Perfil</h2>
+            <div class="card">
+                <form id="perfilForm">
+                    <div class="form-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" id="perfil-nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email (Google)</label>
+                        <input type="email" id="perfil-email" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" id="perfil-telefono">
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección</label>
+                        <input type="text" id="perfil-direccion">
+                    </div>
+                    <button type="submit" class="submit-btn" id="btnSavePerfil">
+                        <i class="fa-solid fa-save"></i> Actualizar Datos
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="property-form-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="property-modal-title">Nueva Propiedad</h3>
+                <button class="close-modal" id="closePropertyModal">&times;</button>
+            </div>
+            <form id="propertyForm">
+                <input type="hidden" id="property-id">
+                <div class="form-group">
+                    <label>Nombre (ej: Piso Centro)</label>
+                    <input type="text" id="property-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Dirección Completa</label>
+                    <input type="text" id="property-address" required>
+                </div>
+                <div class="form-group">
+                    <label>Código de Vinculación (Automático)</label>
+                    <input type="text" id="property-reference" readonly style="background: #f3f4f6;">
+                </div>
+                <button type="submit" class="submit-btn">Guardar Propiedad</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="js/auth.js"></script>
+    <script src="js/properties.js"></script>
+    <script src="js/incidents.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/diagnostic.js"></script>
+    
+    <script src="js/app.js"></script>
+    
+    <!-- Ejecutar diagnóstico automáticamente después de 3 segundos -->
+    <script>
+        setTimeout(() => {
+            if (typeof window.runDiagnostic === 'function') {
+                console.log("🔍 Ejecutando diagnóstico automático...");
+                window.runDiagnostic();
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
