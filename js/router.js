@@ -28,44 +28,67 @@ const router = {
             // Corregir rutas relativas de CSS y otros recursos según el rol
             const basePath = role === 'inquilino' ? 'inquilino/' : 'propietario/';
             
-            // Reemplazar referencias a styles.css y otros recursos
-            html = html.replace(/href="styles\.css"/g, `href="${basePath}styles.css"`);
-            html = html.replace(/href="js\//g, `href="${basePath}js/`);
-            html = html.replace(/src="js\//g, `src="${basePath}js/`);
+            // Usar DOMParser para parsear el HTML completo (incluye head y body)
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
             
-            // Crear un contenedor temporal para parsear el HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-
-            // Extraer y cargar los estilos CSS del head
-            const headContent = tempDiv.querySelector('head');
-            if (headContent) {
-                const links = headContent.querySelectorAll('link[rel="stylesheet"]');
-                links.forEach(link => {
-                    const href = link.getAttribute('href');
-                    if (href) {
-                        // Corregir la ruta si es necesaria
-                        const correctedHref = href.startsWith('http') ? href : 
-                                             href.startsWith('/') ? href : 
-                                             `${basePath}${href}`;
-                        
-                        // Verificar si ya está cargado usando el href corregido
-                        if (!document.querySelector(`link[href="${correctedHref}"]`)) {
-                            const newLink = document.createElement('link');
-                            newLink.rel = 'stylesheet';
-                            newLink.href = correctedHref;
-                            document.head.appendChild(newLink);
-                            console.log(`✅ CSS cargado: ${correctedHref}`);
-                        }
+            // Extraer y cargar los estilos CSS del head ANTES de inyectar el body
+            const headLinks = doc.head.querySelectorAll('link[rel="stylesheet"]');
+            headLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href) return;
+                
+                let correctedHref = href;
+                
+                // Procesar solo rutas relativas (no URLs absolutas ni CDN)
+                if (!href.startsWith('http') && !href.startsWith('//')) {
+                    if (href.startsWith('/')) {
+                        // Ruta absoluta desde la raíz - mantenerla
+                        correctedHref = href;
+                    } else {
+                        // Ruta relativa - agregar el basePath
+                        correctedHref = `${basePath}${href}`;
                     }
-                });
-            }
+                    
+                    console.log(`🔗 Procesando CSS: "${href}" -> "${correctedHref}"`);
+                    
+                    // Verificar si ya está cargado usando múltiples métodos
+                    const existingByHref = document.querySelector(`link[href="${correctedHref}"]`);
+                    const existingByData = document.querySelector(`link[data-app-css="${correctedHref}"]`);
+                    
+                    if (!existingByHref && !existingByData) {
+                        const newLink = document.createElement('link');
+                        newLink.rel = 'stylesheet';
+                        newLink.href = correctedHref;
+                        newLink.setAttribute('data-app-css', correctedHref);
+                        newLink.onerror = () => {
+                            console.error(`❌ Error cargando CSS: ${correctedHref}`);
+                        };
+                        newLink.onload = () => {
+                            console.log(`✅ CSS cargado exitosamente: ${correctedHref}`);
+                        };
+                        document.head.appendChild(newLink);
+                    } else {
+                        console.log(`⏭️ CSS ya cargado: ${correctedHref}`);
+                    }
+                } else {
+                    // URLs absolutas (CDN) - cargar directamente
+                    const existingLink = document.querySelector(`link[href="${href}"]`);
+                    if (!existingLink) {
+                        const newLink = document.createElement('link');
+                        newLink.rel = 'stylesheet';
+                        newLink.href = href;
+                        document.head.appendChild(newLink);
+                    }
+                }
+            });
 
             // Extraer el contenido del body
-            const bodyContent = tempDiv.querySelector('body');
+            const bodyContent = doc.body;
             if (bodyContent) {
                 container.innerHTML = bodyContent.innerHTML;
             } else {
+                // Fallback: procesar el HTML manualmente
                 container.innerHTML = html;
             }
 
@@ -139,11 +162,23 @@ const router = {
                 return;
             }
 
+            // Si config.js ya está cargado globalmente, no cargarlo de nuevo
+            if (src.includes('config.js') && window._supabase) {
+                resolve();
+                return;
+            }
+
             const script = document.createElement('script');
             script.src = src;
             script.setAttribute('data-src', src);
-            script.onload = resolve;
-            script.onerror = reject;
+            script.onload = () => {
+                console.log(`✅ Script cargado: ${src}`);
+                resolve();
+            };
+            script.onerror = (error) => {
+                console.error(`❌ Error cargando script: ${src}`, error);
+                reject(error);
+            };
             document.head.appendChild(script);
         });
     }
