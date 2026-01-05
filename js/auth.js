@@ -183,3 +183,6 @@ window.login = login;
 window.logout = logout;
 window.selectRole = selectRole;
 window.currentUser = currentUser;
+
+// Exponer loginWithGoogle para compatibilidad con las apps originales
+window.loginWithGoogle = login;

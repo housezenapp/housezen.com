@@ -5,6 +5,16 @@
 function initializeInquilinoApp() {
     console.log('🏠 Inicializando aplicación de Inquilino...');
     
+    // Asegurar que no haya login-page visible cuando se carga desde el sistema unificado
+    const loginPage = document.getElementById('login-page');
+    const appContent = document.getElementById('app-content');
+    if (loginPage && appContent && window.currentUser) {
+        loginPage.style.display = 'none';
+        if (appContent.style.display === 'none') {
+            appContent.style.display = 'block';
+        }
+    }
+    
     setupPriorityButtons();
     
     const incidentForm = document.getElementById('incidentForm');

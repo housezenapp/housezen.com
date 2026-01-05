@@ -5,6 +5,16 @@
 function initializeCaseroApp() {
     console.log('🏢 Inicializando aplicación de Casero...');
     
+    // Asegurar que el login-page esté oculto cuando se carga desde el sistema unificado
+    const loginPage = document.getElementById('login-page');
+    const appContent = document.getElementById('app-content');
+    if (loginPage && appContent && window.currentUser) {
+        loginPage.classList.add('hidden');
+        loginPage.style.display = 'none';
+        appContent.classList.remove('hidden');
+        appContent.style.display = 'block';
+    }
+    
     // Configurar eventos
     if (typeof window.setupEventListeners === 'function') {
         window.setupEventListeners();

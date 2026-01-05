@@ -94,6 +94,20 @@ const router = {
                 bodyHTML = bodyHTML.replace(/src=["']js\//g, `src="${basePath}js/`);
                 
                 container.innerHTML = bodyHTML;
+                
+                // Ocultar automáticamente el login-page si existe (estamos cargando desde sistema unificado)
+                setTimeout(() => {
+                    const loginPage = container.querySelector('#login-page');
+                    const appContent = container.querySelector('#app-content');
+                    if (loginPage) {
+                        loginPage.style.display = 'none';
+                        loginPage.classList.add('hidden');
+                    }
+                    if (appContent) {
+                        appContent.style.display = 'block';
+                        appContent.classList.remove('hidden');
+                    }
+                }, 50);
             } else {
                 // Fallback: procesar el HTML manualmente
                 container.innerHTML = html;
