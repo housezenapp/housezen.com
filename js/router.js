@@ -23,11 +23,43 @@ const router = {
                 throw new Error(`No se pudo cargar la aplicación: ${response.statusText}`);
             }
 
-            const html = await response.text();
+            let html = await response.text();
+            
+            // Corregir rutas relativas de CSS y otros recursos según el rol
+            const basePath = role === 'inquilino' ? 'inquilino/' : 'propietario/';
+            
+            // Reemplazar referencias a styles.css y otros recursos
+            html = html.replace(/href="styles\.css"/g, `href="${basePath}styles.css"`);
+            html = html.replace(/href="js\//g, `href="${basePath}js/`);
+            html = html.replace(/src="js\//g, `src="${basePath}js/`);
             
             // Crear un contenedor temporal para parsear el HTML
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html;
+
+            // Extraer y cargar los estilos CSS del head
+            const headContent = tempDiv.querySelector('head');
+            if (headContent) {
+                const links = headContent.querySelectorAll('link[rel="stylesheet"]');
+                links.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href) {
+                        // Corregir la ruta si es necesaria
+                        const correctedHref = href.startsWith('http') ? href : 
+                                             href.startsWith('/') ? href : 
+                                             `${basePath}${href}`;
+                        
+                        // Verificar si ya está cargado usando el href corregido
+                        if (!document.querySelector(`link[href="${correctedHref}"]`)) {
+                            const newLink = document.createElement('link');
+                            newLink.rel = 'stylesheet';
+                            newLink.href = correctedHref;
+                            document.head.appendChild(newLink);
+                            console.log(`✅ CSS cargado: ${correctedHref}`);
+                        }
+                    }
+                });
+            }
 
             // Extraer el contenido del body
             const bodyContent = tempDiv.querySelector('body');
@@ -67,10 +99,7 @@ const router = {
     },
 
     async loadAppScripts(role) {
-        // Cargar primero config.js del raíz (ya debería estar cargado, pero por si acaso)
-        if (!window._supabase) {
-            await this.loadScript('../js/config.js');
-        }
+        // config.js ya está cargado en el index.html principal, no necesitamos cargarlo de nuevo
 
         // Cargar scripts según el rol (sin config.js porque usamos el del raíz)
         const scriptsToLoad = role === 'inquilino' 
