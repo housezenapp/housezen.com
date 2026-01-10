@@ -52,18 +52,34 @@ function showPage(pageName) {
     }
 
     // Cargar datos con un pequeño delay para asegurar que el DOM esté listo
-    setTimeout(() => {
+    setTimeout(async () => {
+        // Verificar que currentUser esté disponible antes de cargar datos
+        if (!window.currentUser && window._supabase) {
+            try {
+                const { data: { session } } = await window._supabase.auth.getSession();
+                if (session) {
+                    window.currentUser = session.user;
+                }
+            } catch (err) {
+                console.error('Error obteniendo sesión en showPage:', err);
+            }
+        }
+
         if (pageName === 'incidencias') {
-            if (typeof window.loadIncidents === 'function') {
+            if (typeof window.loadIncidents === 'function' && window.currentUser) {
                 console.log("📥 Cargando incidencias...");
-                window.loadIncidents();
+                await window.loadIncidents();
+            } else if (!window.currentUser) {
+                console.warn("⚠️ No hay usuario en sesión, no se pueden cargar incidencias");
             } else {
                 console.error("❌ loadIncidents no está disponible");
             }
         } else if (pageName === 'propiedades') {
-            if (typeof window.loadProperties === 'function') {
+            if (typeof window.loadProperties === 'function' && window.currentUser) {
                 console.log("📥 Cargando propiedades...");
-                window.loadProperties();
+                await window.loadProperties();
+            } else if (!window.currentUser) {
+                console.warn("⚠️ No hay usuario en sesión, no se pueden cargar propiedades");
             } else {
                 console.error("❌ loadProperties no está disponible");
             }

@@ -93,6 +93,40 @@ async function createOrUpdateCaseroProfile(user) {
     }
 }
 
+// Función para recargar datos del usuario cuando se refresca el token
+async function reloadCaseroUserData() {
+    try {
+        if (!window.currentUser) {
+            const { data: { session } } = await window._supabase.auth.getSession();
+            if (session) {
+                window.currentUser = session.user;
+            } else {
+                return;
+            }
+        }
+
+        // Recargar datos de la página activa
+        const activePage = document.querySelector('.page.active');
+        const pageId = activePage ? activePage.id : null;
+        
+        if (pageId === 'page-incidencias' || !pageId) {
+            if (typeof window.loadIncidents === 'function') {
+                await window.loadIncidents();
+            }
+        } else if (pageId === 'page-propiedades') {
+            if (typeof window.loadProperties === 'function') {
+                await window.loadProperties();
+            }
+        } else if (pageId === 'page-perfil') {
+            if (typeof window.loadProfile === 'function') {
+                await window.loadProfile();
+            }
+        }
+    } catch (err) {
+        console.error('Error recargando datos del casero:', err);
+    }
+}
+
 // Escuchar cambios de sesión desde el auth unificado
 if (window._supabase) {
     window._supabase.auth.onAuthStateChange(async (event, session) => {
@@ -100,7 +134,10 @@ if (window._supabase) {
             window.currentUser = session.user;
             await handleCaseroSession(session);
             
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            if (event === 'TOKEN_REFRESHED') {
+                // Recargar datos cuando se refresca el token
+                await reloadCaseroUserData();
+            } else if (event === 'SIGNED_IN') {
                 if (window.showPage) window.showPage('incidencias');
             }
         }

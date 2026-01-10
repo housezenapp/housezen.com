@@ -26,28 +26,76 @@ function initializeCaseroApp() {
     }
 
     // Cargar datos iniciales si hay sesión
-    if (window.currentUser && window._supabase) {
-        handleCaseroSession({ user: window.currentUser });
-        
-        // Cargar datos de la página activa
-        setTimeout(async () => {
-            const activePage = document.querySelector('.page.active');
-            const pageId = activePage ? activePage.id : null;
-            
-            if (pageId === 'page-incidencias' || !pageId) {
-                if (typeof window.loadIncidents === 'function') {
-                    await window.loadIncidents();
+    // Esperar a que window.currentUser esté disponible (puede tardar un poco si viene del auth unificado)
+    const tryInitializeData = async () => {
+        // Si no hay currentUser todavía, intentar obtenerlo de la sesión
+        if (!window.currentUser && window._supabase) {
+            try {
+                const { data: { session } } = await window._supabase.auth.getSession();
+                if (session) {
+                    window.currentUser = session.user;
                 }
-            } else if (pageId === 'page-propiedades') {
-                if (typeof window.loadProperties === 'function') {
-                    await window.loadProperties();
-                }
-            } else if (pageId === 'page-perfil') {
-                if (typeof window.loadProfile === 'function') {
-                    await window.loadProfile();
-                }
+            } catch (err) {
+                console.error('Error obteniendo sesión:', err);
             }
-        }, 200);
+        }
+
+        if (window.currentUser && window._supabase) {
+            await handleCaseroSession({ user: window.currentUser });
+            
+            // Cargar datos de la página activa
+            setTimeout(async () => {
+                const activePage = document.querySelector('.page.active');
+                const pageId = activePage ? activePage.id : null;
+                
+                if (pageId === 'page-incidencias' || !pageId) {
+                    if (typeof window.loadIncidents === 'function') {
+                        await window.loadIncidents();
+                    }
+                } else if (pageId === 'page-propiedades') {
+                    if (typeof window.loadProperties === 'function') {
+                        await window.loadProperties();
+                    }
+                } else if (pageId === 'page-perfil') {
+                    if (typeof window.loadProfile === 'function') {
+                        await window.loadProfile();
+                    }
+                }
+            }, 200);
+        } else {
+            // Si después de 1 segundo no hay usuario, mostrar error
+            setTimeout(() => {
+                if (!window.currentUser) {
+                    console.warn('⚠️ No se pudo obtener la sesión del usuario');
+                    const incidentsContainer = document.getElementById('incidents-logistics-container');
+                    const propertiesContainer = document.getElementById('properties-container');
+                    if (incidentsContainer && incidentsContainer.querySelector('.loading-state')) {
+                        incidentsContainer.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fa-solid fa-exclamation-triangle"></i>
+                                <div class="empty-state-text">Error: No se pudo cargar la sesión. Por favor, recarga la página.</div>
+                            </div>
+                        `;
+                    }
+                    if (propertiesContainer && propertiesContainer.querySelector('.loading-state')) {
+                        propertiesContainer.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fa-solid fa-exclamation-triangle"></i>
+                                <div class="empty-state-text">Error: No se pudo cargar la sesión. Por favor, recarga la página.</div>
+                            </div>
+                        `;
+                    }
+                }
+            }, 1000);
+        }
+    };
+
+    // Intentar inicializar inmediatamente
+    tryInitializeData();
+    
+    // Si no hay usuario todavía, intentar de nuevo después de un breve delay
+    if (!window.currentUser) {
+        setTimeout(tryInitializeData, 500);
     }
 
     console.log('✅ Aplicación de Casero inicializada');

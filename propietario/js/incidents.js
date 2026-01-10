@@ -25,10 +25,33 @@ async function loadIncidents() {
 
         if (!window.currentUser) {
             console.error('❌ loadIncidents: No hay currentUser');
-            if (typeof window.forceLogout === 'function') {
-                await window.forceLogout();
+            // Intentar obtener la sesión antes de mostrar error
+            try {
+                const { data: { session } } = await window._supabase.auth.getSession();
+                if (session) {
+                    window.currentUser = session.user;
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <div class="empty-state-text">Sesión expirada. Por favor, recarga la página.</div>
+                        </div>
+                    `;
+                    if (typeof window.forceLogout === 'function') {
+                        await window.forceLogout();
+                    }
+                    return;
+                }
+            } catch (err) {
+                console.error('Error obteniendo sesión:', err);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <div class="empty-state-text">Error: No se pudo obtener la sesión. Por favor, recarga la página.</div>
+                    </div>
+                `;
+                return;
             }
-            return;
         }
 
         // Verificar que Supabase esté inicializado
