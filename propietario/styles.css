@@ -217,15 +217,17 @@ body {
 .logo-h {
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    background: linear-gradient(135deg, var(--primary-light) 0%, #B2DFDB 100%);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-weight: 900;
-    font-size: 1.3rem;
     box-shadow: 0 4px 10px rgba(20,184,166,0.3);
+}
+
+.logo-h i {
+    font-size: 1.2rem;
+    color: var(--primary);
 }
 
 .sidebar-nav {
