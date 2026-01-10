@@ -16,5 +16,11 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     }
 });
 
+// Exponer _supabase globalmente para uso en módulos de inquilino y propietario
+window._supabase = _supabase;
+
 let currentUser = null;
 let authInitialized = false;
+
+// Exponer currentUser globalmente (se actualizará desde auth.js)
+window.currentUser = currentUser;

@@ -39,7 +39,7 @@ async function handleInquilinoSession(session) {
         if (profileEmailEl) profileEmailEl.value = userEmail;
 
         // Asegurar que el perfil existe con rol inquilino
-        const { error: upsertError } = await _supabase
+        const { error: upsertError } = await window._supabase
             .from('perfiles')
             .upsert({
                 id: currentUser.id,
@@ -56,7 +56,7 @@ async function handleInquilinoSession(session) {
         }
 
         // Cargar el perfil completo
-        const { data: currentProfile, error: profileError } = await _supabase
+        const { data: currentProfile, error: profileError } = await window._supabase
             .from('perfiles')
             .select('*')
             .eq('id', currentUser.id)
@@ -67,7 +67,7 @@ async function handleInquilinoSession(session) {
         }
 
         // Cargar la propiedad vinculada
-        const { data: vinculacion, error: vinculacionError } = await _supabase
+        const { data: vinculacion, error: vinculacionError } = await window._supabase
             .from('perfil_propiedades')
             .select('codigo_propiedad')
             .eq('id_perfil_inquilino', currentUser.id)
@@ -80,7 +80,7 @@ async function handleInquilinoSession(session) {
         // Si hay vinculación, obtener los datos de la propiedad
         let propiedadData = null;
         if (vinculacion && vinculacion.codigo_propiedad) {
-            const { data: propiedad, error: propError } = await _supabase
+            const { data: propiedad, error: propError } = await window._supabase
                 .from('propiedades')
                 .select('id, direccion_completa')
                 .eq('id', vinculacion.codigo_propiedad)
@@ -133,18 +133,18 @@ async function handleInquilinoSession(session) {
 async function reloadInquilinoUserData() {
     try {
         if (!window.currentUser) {
-            const { data: { session } } = await _supabase.auth.getSession();
+            const { data: { session } } = await window._supabase.auth.getSession();
             if (session) window.currentUser = session.user;
             else return;
         }
 
-        const { data: currentProfile } = await _supabase
+        const { data: currentProfile } = await window._supabase
             .from('perfiles')
             .select('*')
             .eq('id', window.currentUser.id)
             .maybeSingle();
 
-        const { data: vinculacion } = await _supabase
+        const { data: vinculacion } = await window._supabase
             .from('perfil_propiedades')
             .select('codigo_propiedad')
             .eq('id_perfil_inquilino', window.currentUser.id)
@@ -152,7 +152,7 @@ async function reloadInquilinoUserData() {
 
         let propiedadData = null;
         if (vinculacion && vinculacion.codigo_propiedad) {
-            const { data: propiedad } = await _supabase
+            const { data: propiedad } = await window._supabase
                 .from('propiedades')
                 .select('id, direccion_completa')
                 .eq('id', vinculacion.codigo_propiedad)

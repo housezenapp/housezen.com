@@ -148,10 +148,19 @@ async function handleSubmit(e) {
 
     try {
         // Obtener el id de la propiedad vinculada
-        const { data: vinculacion, error: vinculacionError } = await _supabase
+        if (!window.currentUser) {
+            console.error('%c❌ No hay usuario en sesión', 'color: red; font-weight: bold;');
+            showToast('Error: Sesión no válida. Por favor, recarga la página.');
+            btn.disabled = false;
+            btn.innerHTML = 'Enviar Reporte <i class="fa-solid fa-paper-plane"></i>';
+            isSubmitting = false;
+            return;
+        }
+
+        const { data: vinculacion, error: vinculacionError } = await window._supabase
             .from('perfil_propiedades')
             .select('codigo_propiedad')
-            .eq('id_perfil_inquilino', currentUser.id)
+            .eq('id_perfil_inquilino', window.currentUser.id)
             .maybeSingle();
 
         if (vinculacionError) {
@@ -174,8 +183,8 @@ async function handleSubmit(e) {
             telefono: document.getElementById('inc-phone').value,
             user_id: window.currentUser.id,
             propiedad_id: vinculacion?.codigo_propiedad || null,
-            nombre_inquilino: window.currentUser.user_metadata.full_name,
-            email_inquilino: window.currentUser.email,
+            nombre_inquilino: window.currentUser.user_metadata?.full_name || 'Usuario',
+            email_inquilino: window.currentUser.email || '',
             estado: 'Enviada'
         };
 
@@ -190,7 +199,7 @@ async function handleSubmit(e) {
 
         console.log('%c💾 Insertando en Supabase...', 'color: #3498DB;');
 
-        const { error } = await _supabase.from('incidencias').insert([incidenciaData]);
+        const { error } = await window._supabase.from('incidencias').insert([incidenciaData]);
 
         console.log('%c📥 Respuesta de Supabase:', 'color: #9B59B6; font-weight: bold;');
 
@@ -274,13 +283,15 @@ async function renderIncidents(forceRefresh = false) {
 
     try {
         if (!window.currentUser) {
-            const { data: { session } } = await _supabase.auth.getSession();
-            if (session) window.currentUser = session.user;
-            else return;
+            const { data: { session } } = await window._supabase.auth.getSession();
+            if (session) {
+                window.currentUser = session.user;
+            } else {
+                return;
+            }
         }
-        const currentUser = window.currentUser;
 
-        const { data, error } = await _supabase
+        const { data, error } = await window._supabase
             .from('incidencias')
             .select('*')
             .eq('user_id', window.currentUser.id)

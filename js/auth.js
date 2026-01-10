@@ -38,9 +38,11 @@ async function initializeAuth() {
 
         if (session) {
             currentUser = session.user;
+            window.currentUser = session.user; // Sincronizar globalmente
             await handleUserSession(session);
         } else {
             currentUser = null;
+            window.currentUser = null; // Sincronizar globalmente
             showLoginPage();
         }
     });
@@ -58,9 +60,11 @@ async function initializeAuth() {
         if (session) {
             console.log('%c✓ Sesión existente encontrada', 'color: green;');
             currentUser = session.user;
+            window.currentUser = session.user; // Sincronizar globalmente
             await handleUserSession(session);
         } else {
             console.log('%c⚠️ No hay sesión activa', 'color: orange;');
+            window.currentUser = null; // Sincronizar globalmente
             showLoginPage();
         }
     } catch (err) {
@@ -74,6 +78,7 @@ async function initializeAuth() {
 async function handleUserSession(session) {
     try {
         currentUser = session.user;
+        window.currentUser = session.user; // Sincronizar globalmente
 
         // Cargar perfil del usuario
         const { data: profile, error: profileError } = await _supabase
@@ -129,7 +134,7 @@ async function handleUserSession(session) {
 }
 
 async function selectRole(role) {
-    if (!currentUser) {
+    if (!currentUser || !window.currentUser) {
         showToast("Error: No hay sesión activa");
         return;
     }
@@ -182,7 +187,7 @@ function loadAppForRole(role) {
 window.login = login;
 window.logout = logout;
 window.selectRole = selectRole;
-window.currentUser = currentUser;
+// window.currentUser ya se actualiza dinámicamente en initializeAuth y handleUserSession
 
 // Exponer loginWithGoogle para compatibilidad con las apps originales
 window.loginWithGoogle = login;

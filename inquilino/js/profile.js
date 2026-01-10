@@ -1,17 +1,16 @@
 async function loadProfileData() {
     if (!window.currentUser) {
-        const { data: { session } } = await _supabase.auth.getSession();
+        const { data: { session } } = await window._supabase.auth.getSession();
         if (session) window.currentUser = session.user;
         else return;
     }
-    const currentUser = window.currentUser;
 
     try {
         // Cargar el perfil completo
-        const { data: currentProfile, error: profileError } = await _supabase
+        const { data: currentProfile, error: profileError } = await window._supabase
             .from('perfiles')
             .select('*')
-            .eq('id', currentUser.id)
+            .eq('id', window.currentUser.id)
             .maybeSingle();
 
         if (profileError) {
@@ -20,10 +19,10 @@ async function loadProfileData() {
         }
 
         // Cargar la propiedad vinculada desde perfil_propiedades
-        const { data: vinculacion, error: vinculacionError } = await _supabase
+        const { data: vinculacion, error: vinculacionError } = await window._supabase
             .from('perfil_propiedades')
             .select('codigo_propiedad')
-            .eq('id_perfil_inquilino', currentUser.id)
+            .eq('id_perfil_inquilino', window.currentUser.id)
             .maybeSingle();
 
         if (vinculacionError) {
@@ -33,7 +32,7 @@ async function loadProfileData() {
         // Si hay vinculación, obtener los datos de la propiedad
         let propiedadData = null;
         if (vinculacion && vinculacion.codigo_propiedad) {
-            const { data: propiedad, error: propError } = await _supabase
+            const { data: propiedad, error: propError } = await window._supabase
                 .from('propiedades')
                 .select('id, direccion_completa')
                 .eq('id', vinculacion.codigo_propiedad)
@@ -93,7 +92,7 @@ async function saveUserData() {
 
     try {
         // Buscar la propiedad por código de referencia (TABLA PROPIEDADES)
-        const { data: propiedad, error: propError } = await _supabase
+        const { data: propiedad, error: propError } = await window._supabase
             .from('propiedades')
             .select('direccion_completa, perfil_id') // Mantenemos perfil_id para el casero
             .eq('id', reference)
@@ -109,7 +108,14 @@ async function saveUserData() {
         }
 
         // Actualizar el teléfono en el perfil
-        const { error: perfilError } = await _supabase
+        if (!window.currentUser) {
+            showToast('Error: Sesión no válida. Por favor, recarga la página.');
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar y Vincular';
+            return;
+        }
+
+        const { error: perfilError } = await window._supabase
             .from('perfiles')
             .update({ telefono: phone })
             .eq('id', window.currentUser.id);
@@ -119,17 +125,24 @@ async function saveUserData() {
         // --- AQUÍ ESTABA EL FALLO: Vinculación en perfil_propiedades ---
         
         // 1. Buscamos si ya existe el vínculo
-        const { data: existingLink } = await _supabase
+        if (!window.currentUser) {
+            showToast('Error: Sesión no válida. Por favor, recarga la página.');
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar y Vincular';
+            return;
+        }
+
+        const { data: existingLink } = await window._supabase
             .from('perfil_propiedades')
             .select('id_perfil_inquilino')
-            .eq('id_perfil_inquilino', currentUser.id)
+            .eq('id_perfil_inquilino', window.currentUser.id)
             .maybeSingle();
 
         let relacionError = null;
 
         if (existingLink) {
             // 2. Actualizar vinculación existente
-            const { error } = await _supabase
+            const { error } = await window._supabase
                 .from('perfil_propiedades')
                 .update({ 
                     codigo_propiedad: reference, // CAMBIADO: de id_propiedad a codigo_propiedad
@@ -139,7 +152,7 @@ async function saveUserData() {
             relacionError = error;
         } else {
             // 3. Crear nueva vinculación
-            const { error } = await _supabase
+            const { error } = await window._supabase
                 .from('perfil_propiedades')
                 .insert({
                     id_perfil_inquilino: window.currentUser.id,
