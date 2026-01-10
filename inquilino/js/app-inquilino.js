@@ -22,12 +22,47 @@ function initializeInquilinoApp() {
         incidentForm.onsubmit = handleSubmit;
     }
 
-    // Configurar eventos de radio buttons para categoría "Otros"
-    const otrosRadios = document.querySelectorAll('input[name="category"]');
-    otrosRadios.forEach(radio => {
-        radio.addEventListener('click', function() {
-            handleRadioClick(this);
-        });
+    // Configurar eventos de radio buttons y labels para categoría
+    const categoryOptions = document.querySelectorAll('.cat-option');
+    categoryOptions.forEach(option => {
+        const radio = option.querySelector('input[name="category"]');
+        if (radio) {
+            // Agregar listener al label para capturar el click
+            option.addEventListener('click', function(e) {
+                // Guardar el estado antes del click
+                const wasChecked = radio.checked;
+                
+                // Usar setTimeout para que el evento nativo del label marque el radio primero
+                setTimeout(() => {
+                    // Si el radio ya estaba marcado antes del click, desmarcarlo
+                    if (wasChecked && radio.checked) {
+                        radio.checked = false;
+                        lastRadioChecked = null;
+                        
+                        // Si es "Otros", ocultar dropdown
+                        if (radio.id === 'otros-radio') {
+                            const dropdown = document.getElementById('otros-dropdown');
+                            const selectedDisplay = document.getElementById('otros-selected');
+                            const otrosSelect = document.getElementById('otros-select');
+                            if (dropdown) dropdown.style.display = 'none';
+                            if (selectedDisplay) selectedDisplay.style.display = 'none';
+                            if (otrosSelect) otrosSelect.selectedIndex = 0;
+                            radio.value = 'Otros';
+                        }
+                    } else if (radio.checked && !wasChecked) {
+                        // Si se marcó (no estaba marcado antes), procesar normalmente
+                        handleRadioClick(radio);
+                    }
+                }, 0);
+            });
+            
+            // También agregar listener al radio directamente para manejar cambios
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    handleRadioClick(this);
+                }
+            });
+        }
     });
 
     const otrosSelect = document.getElementById('otros-select');

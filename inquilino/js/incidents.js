@@ -8,34 +8,26 @@ function handleRadioClick(radio) {
     const selectedDisplay = document.getElementById('otros-selected');
     const otrosSelect = document.getElementById('otros-select');
 
-    if (lastRadioChecked === radio && radio.checked) {
+    // Actualizar referencia del último radio marcado
+    lastRadioChecked = radio;
+
+    // Si es el radio de "Otros", mostrar el dropdown
+    if (radio === otrosRadio && dropdown) {
+        dropdown.style.display = 'block';
+        if (selectedDisplay) selectedDisplay.style.display = 'none';
+        if (otrosSelect) otrosSelect.selectedIndex = 0;
         setTimeout(() => {
-            radio.checked = false;
-            lastRadioChecked = null;
-
-            if (radio === otrosRadio && dropdown) {
-                dropdown.style.display = 'none';
-                if (selectedDisplay) selectedDisplay.style.display = 'none';
-                if (otrosSelect) otrosSelect.selectedIndex = 0;
-                otrosRadio.value = 'Otros';
-            }
-        }, 0);
+            if (otrosSelect) otrosSelect.focus();
+        }, 100);
     } else {
-        lastRadioChecked = radio;
-
-        if (radio === otrosRadio && dropdown) {
-            dropdown.style.display = 'block';
-            if (selectedDisplay) selectedDisplay.style.display = 'none';
-            if (otrosSelect) otrosSelect.selectedIndex = 0;
-            setTimeout(() => {
-                if (otrosSelect) otrosSelect.focus();
-            }, 100);
-        } else {
-            if (dropdown) dropdown.style.display = 'none';
-            if (otrosSelect) otrosSelect.selectedIndex = 0;
-            if (otrosRadio) otrosRadio.value = 'Otros';
-            if (selectedDisplay) selectedDisplay.style.display = 'none';
+        // Si es cualquier otra categoría, ocultar el dropdown de "Otros"
+        if (dropdown) dropdown.style.display = 'none';
+        if (otrosSelect) otrosSelect.selectedIndex = 0;
+        if (otrosRadio) {
+            otrosRadio.value = 'Otros';
+            otrosRadio.checked = false;
         }
+        if (selectedDisplay) selectedDisplay.style.display = 'none';
     }
 }
 
