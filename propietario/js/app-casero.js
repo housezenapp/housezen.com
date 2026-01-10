@@ -5,6 +5,11 @@
 function initializeCaseroApp() {
     console.log('🏢 Inicializando aplicación de Casero...');
     
+    // Asegurar que el router.currentRole esté establecido
+    if (window.router) {
+        window.router.currentRole = 'casero';
+    }
+    
     // Asegurar que el login-page esté oculto cuando se carga desde el sistema unificado
     const loginPage = document.getElementById('login-page');
     const appContent = document.getElementById('app-content');

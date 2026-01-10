@@ -15,22 +15,16 @@ async function loadIncidents() {
     `;
 
     try {
-        // Verificar sesión antes de cargar datos
-        if (typeof window.checkAndRefreshSession === 'function') {
-            const hasValidSession = await window.checkAndRefreshSession();
-            if (!hasValidSession) {
-                return; // forceLogout ya fue llamado por checkAndRefreshSession
-            }
-        }
-
+        // Verificar y sincronizar sesión antes de cargar datos
         if (!window.currentUser) {
-            console.error('❌ loadIncidents: No hay currentUser');
-            // Intentar obtener la sesión antes de mostrar error
+            console.warn('⚠️ loadIncidents: No hay currentUser, intentando obtener sesión...');
             try {
-                const { data: { session } } = await window._supabase.auth.getSession();
-                if (session) {
+                const { data: { session }, error: sessionError } = await window._supabase.auth.getSession();
+                if (session && !sessionError) {
                     window.currentUser = session.user;
+                    console.log('✅ Sesión recuperada:', window.currentUser.id);
                 } else {
+                    console.error('❌ No hay sesión válida:', sessionError);
                     container.innerHTML = `
                         <div class="empty-state">
                             <i class="fa-solid fa-exclamation-triangle"></i>
@@ -43,7 +37,7 @@ async function loadIncidents() {
                     return;
                 }
             } catch (err) {
-                console.error('Error obteniendo sesión:', err);
+                console.error('❌ Error obteniendo sesión:', err);
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fa-solid fa-exclamation-triangle"></i>
@@ -54,6 +48,20 @@ async function loadIncidents() {
             }
         }
 
+        // Verificar sesión antes de cargar datos (refrescar token si es necesario)
+        if (typeof window.checkAndRefreshSession === 'function') {
+            const hasValidSession = await window.checkAndRefreshSession();
+            if (!hasValidSession) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <div class="empty-state-text">Error de autenticación. Por favor, recarga la página.</div>
+                    </div>
+                `;
+                return; // forceLogout ya fue llamado por checkAndRefreshSession
+            }
+        }
+
         // Verificar que Supabase esté inicializado
         if (!window._supabase) {
             console.error('❌ loadIncidents: Supabase no está inicializado');
@@ -61,6 +69,18 @@ async function loadIncidents() {
                 <div class="empty-state">
                     <i class="fa-solid fa-exclamation-triangle"></i>
                     <div class="empty-state-text">Error: La conexión a la base de datos no está disponible. Recarga la página.</div>
+                </div>
+            `;
+            return;
+        }
+
+        // Verificar que currentUser esté sincronizado después de checkAndRefreshSession
+        if (!window.currentUser) {
+            console.error('❌ loadIncidents: currentUser no disponible después de verificar sesión');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    <div class="empty-state-text">Error: No se pudo autenticar. Por favor, recarga la página.</div>
                 </div>
             `;
             return;

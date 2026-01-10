@@ -127,10 +127,24 @@ async function reloadCaseroUserData() {
     }
 }
 
+// Función para verificar si estamos en la página de casero
+function isCaseroPage() {
+    // Verificar si hay elementos específicos de la página de casero
+    const appContent = document.getElementById('app-content');
+    const sidebar = document.getElementById('sidebar');
+    const propertiesContainer = document.getElementById('properties-container');
+    const incidentsContainer = document.getElementById('incidents-logistics-container');
+    
+    // Si hay elementos de casero, estamos en la página de casero
+    return (appContent && (propertiesContainer || incidentsContainer || sidebar)) ||
+           (window.router && window.router.currentRole === 'casero');
+}
+
 // Escuchar cambios de sesión desde el auth unificado
 if (window._supabase) {
     window._supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session && window.router && window.router.currentRole === 'casero') {
+        // Verificar si estamos en la página de casero (no depender solo del router)
+        if (session && isCaseroPage()) {
             window.currentUser = session.user;
             await handleCaseroSession(session);
             
