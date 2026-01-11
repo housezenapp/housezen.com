@@ -28,7 +28,7 @@ async function loadIncidents() {
                 </div>
             `;
         }
-    }, 10000); // 10 segundos
+    }, 5000); // 5 segundos
 
     try {
         // Verificar y sincronizar sesión antes de cargar datos

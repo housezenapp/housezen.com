@@ -276,7 +276,7 @@ async function renderIncidents(forceRefresh = false) {
             </div>
         `;
         
-        // Timeout de 10 segundos para evitar loading infinito
+        // Timeout de 5 segundos para evitar loading infinito
         timeoutId = setTimeout(() => {
             if (loadingShown && container.querySelector('.loading-state')) {
                 console.warn('⏱️ Timeout al cargar incidencias');
@@ -292,7 +292,7 @@ async function renderIncidents(forceRefresh = false) {
                 `;
                 loadingShown = false;
             }
-        }, 10000);
+        }, 5000);
     }
 
     try {
@@ -416,19 +416,7 @@ function dibujarIncidencias(data, isOffline) {
         return;
     }
 
-    let html = '';
-
-    if (isOffline) {
-        html += `
-            <div class="offline-banner">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                Mostrando datos guardados.
-                <span class="refresh-link" onclick="renderIncidents(true)">Refrescar para ver nuevos</span>
-            </div>
-        `;
-    }
-
-    html += data.map(inc => `
+    const html = data.map(inc => `
         <div class="incident-item">
             <div class="incident-header">
                 <div class="incident-title">${inc.titulo}</div>
