@@ -31,77 +31,77 @@ function initializeCaseroApp() {
     }
 
     // Cargar datos iniciales si hay sesión
-    // Esperar a que window.currentUser esté disponible (puede tardar un poco si viene del auth unificado)
+    // Esperar a que window.currentUser y window._supabase estén disponibles
     const tryInitializeData = async () => {
+        // Esperar a que window._supabase esté disponible
+        let attempts = 0;
+        while (!window._supabase && attempts < 20) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (!window._supabase) {
+            console.error('❌ window._supabase no está disponible después de esperar');
+            return;
+        }
+        
         // Si no hay currentUser todavía, intentar obtenerlo de la sesión
-        if (!window.currentUser && window._supabase) {
+        if (!window.currentUser) {
             try {
-                const { data: { session } } = await window._supabase.auth.getSession();
-                if (session) {
+                console.log('🔄 Obteniendo sesión...');
+                const { data: { session }, error } = await window._supabase.auth.getSession();
+                if (session && !error) {
                     window.currentUser = session.user;
+                    console.log('✅ Sesión obtenida:', window.currentUser.id);
+                } else {
+                    console.warn('⚠️ No hay sesión activa:', error);
+                    return;
                 }
             } catch (err) {
-                console.error('Error obteniendo sesión:', err);
+                console.error('❌ Error obteniendo sesión:', err);
+                return;
             }
         }
 
         if (window.currentUser && window._supabase) {
+            console.log('✅ Inicializando datos de casero...');
             await handleCaseroSession({ user: window.currentUser });
             
-            // Cargar datos de la página activa
-            setTimeout(async () => {
-                const activePage = document.querySelector('.page.active');
-                const pageId = activePage ? activePage.id : null;
-                
-                if (pageId === 'page-incidencias' || !pageId) {
-                    if (typeof window.loadIncidents === 'function') {
-                        await window.loadIncidents();
-                    }
-                } else if (pageId === 'page-propiedades') {
-                    if (typeof window.loadProperties === 'function') {
-                        await window.loadProperties();
-                    }
-                } else if (pageId === 'page-perfil') {
-                    if (typeof window.loadProfile === 'function') {
-                        await window.loadProfile();
-                    }
-                }
-            }, 200);
-        } else {
-            // Si después de 1 segundo no hay usuario, mostrar error
+            // Cargar datos de la página activa usando showPage
             setTimeout(() => {
-                if (!window.currentUser) {
-                    console.warn('⚠️ No se pudo obtener la sesión del usuario');
-                    const incidentsContainer = document.getElementById('incidents-logistics-container');
-                    const propertiesContainer = document.getElementById('properties-container');
-                    if (incidentsContainer && incidentsContainer.querySelector('.loading-state')) {
-                        incidentsContainer.innerHTML = `
-                            <div class="empty-state">
-                                <i class="fa-solid fa-exclamation-triangle"></i>
-                                <div class="empty-state-text">Error: No se pudo cargar la sesión. Por favor, recarga la página.</div>
-                            </div>
-                        `;
+                if (typeof window.showPage === 'function') {
+                    const activePage = document.querySelector('.page.active');
+                    const pageId = activePage ? activePage.id : null;
+                    
+                    if (pageId === 'page-incidencias' || !pageId) {
+                        console.log('📄 Cargando página: incidencias');
+                        window.showPage('incidencias');
+                    } else if (pageId === 'page-propiedades') {
+                        console.log('📄 Cargando página: propiedades');
+                        window.showPage('propiedades');
+                    } else if (pageId === 'page-perfil') {
+                        console.log('📄 Cargando página: perfil');
+                        window.showPage('perfil');
+                    } else {
+                        console.log('📄 Cargando página por defecto: incidencias');
+                        window.showPage('incidencias');
                     }
-                    if (propertiesContainer && propertiesContainer.querySelector('.loading-state')) {
-                        propertiesContainer.innerHTML = `
-                            <div class="empty-state">
-                                <i class="fa-solid fa-exclamation-triangle"></i>
-                                <div class="empty-state-text">Error: No se pudo cargar la sesión. Por favor, recarga la página.</div>
-                            </div>
-                        `;
+                } else {
+                    console.error('❌ showPage no está disponible');
+                    // Fallback: llamar directamente a loadIncidents
+                    if (typeof window.loadIncidents === 'function') {
+                        console.log('📥 Cargando incidencias directamente...');
+                        window.loadIncidents();
                     }
                 }
-            }, 1000);
+            }, 300);
         }
     };
 
-    // Intentar inicializar inmediatamente
-    tryInitializeData();
-    
-    // Si no hay usuario todavía, intentar de nuevo después de un breve delay
-    if (!window.currentUser) {
-        setTimeout(tryInitializeData, 500);
-    }
+    // Esperar un momento para que todo esté listo antes de inicializar
+    setTimeout(() => {
+        tryInitializeData();
+    }, 200);
 
     console.log('✅ Aplicación de Casero inicializada');
 }

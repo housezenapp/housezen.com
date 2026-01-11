@@ -53,15 +53,34 @@ function showPage(pageName) {
 
     // Cargar datos con un pequeño delay para asegurar que el DOM esté listo
     setTimeout(async () => {
+        // Esperar a que window._supabase esté disponible
+        if (!window._supabase) {
+            let attempts = 0;
+            while (!window._supabase && attempts < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            if (!window._supabase) {
+                console.error('❌ window._supabase no está disponible en showPage');
+                return;
+            }
+        }
+        
         // Verificar que currentUser esté disponible antes de cargar datos
-        if (!window.currentUser && window._supabase) {
+        if (!window.currentUser) {
             try {
-                const { data: { session } } = await window._supabase.auth.getSession();
-                if (session) {
+                console.log('🔄 Obteniendo sesión en showPage...');
+                const { data: { session }, error } = await window._supabase.auth.getSession();
+                if (session && !error) {
                     window.currentUser = session.user;
+                    console.log('✅ Sesión obtenida en showPage:', window.currentUser.id);
+                } else {
+                    console.warn('⚠️ No hay sesión activa en showPage:', error);
+                    return;
                 }
             } catch (err) {
-                console.error('Error obteniendo sesión en showPage:', err);
+                console.error('❌ Error obteniendo sesión en showPage:', err);
+                return;
             }
         }
 
