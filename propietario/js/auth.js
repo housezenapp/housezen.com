@@ -325,37 +325,46 @@ async function checkAndRefreshSession() {
     }
 }
 
-// Listener para cerrar sesión automáticamente al volver a la pestaña
+// Listener para re-fetch inteligente al volver a la pestaña
 function setupVisibilityListener() {
     let wasHidden = false;
 
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && authInitialized && wasHidden) {
-            console.log("👁️ Pestaña visible de nuevo - Cerrando sesión automáticamente");
+            console.log("👁️ Pestaña visible de nuevo - Verificando sesión y recargando datos");
 
-            // Cerrar sesión automáticamente cuando vuelves a la pestaña
-            // Esto asegura que se recupere la conexión con Supabase
-            console.log("🚪 Cerrando sesión...");
-            
-            // Limpiar storage inmediatamente
-            localStorage.clear();
-            sessionStorage.clear();
-
-            // Cerrar sesión en Supabase
-            if (window._supabase) {
+            // Verificar que hay una sesión activa antes de recargar datos
+            if (window._supabase && window.currentUser) {
                 try {
-                    await window._supabase.auth.signOut();
+                    const { data: { session } } = await window._supabase.auth.getSession();
+                    if (session) {
+                        console.log("✅ Sesión activa encontrada, recargando datos...");
+                        
+                        // Re-disparar la función de carga de datos según la página activa
+                        const activePage = document.querySelector('.page.active');
+                        if (activePage) {
+                            const pageId = activePage.id;
+                            
+                            if (pageId === 'page-incidencias' && typeof window.loadIncidents === 'function') {
+                                await window.loadIncidents();
+                            } else if (pageId === 'page-propiedades' && typeof window.loadProperties === 'function') {
+                                await window.loadProperties();
+                            } else if (pageId === 'page-perfil' && typeof window.loadProfile === 'function') {
+                                window.loadProfile();
+                            }
+                        } else {
+                            // Si no hay página activa, intentar cargar incidencias por defecto
+                            if (typeof window.loadIncidents === 'function') {
+                                await window.loadIncidents();
+                            }
+                        }
+                    } else {
+                        console.log("⚠️ No hay sesión activa al volver a la pestaña");
+                    }
                 } catch (err) {
-                    console.error("⚠️ Error al cerrar sesión en Supabase (ignorado):", err.message);
+                    console.error("❌ Error verificando sesión:", err);
                 }
             }
-
-            // Limpiar usuario actual
-            window.currentUser = null;
-
-            // Recargar la página para que el usuario vuelva a iniciar sesión
-            console.log("🔄 Recargando página...");
-            window.location.reload();
 
         } else if (document.hidden) {
             console.log("😴 Pestaña oculta");

@@ -14,6 +14,21 @@ async function loadIncidents() {
         </div>
     `;
 
+    let timeoutId = setTimeout(() => {
+        if (container && container.querySelector('.loading-state')) {
+            console.warn('⏱️ Timeout al cargar incidencias');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-clock"></i>
+                    <div class="empty-state-text">La carga está tardando demasiado</div>
+                    <button class="submit-btn" style="margin-top: 20px; max-width: 250px;" onclick="window.loadIncidents()">
+                        <i class="fa-solid fa-rotate"></i> Reintentar
+                    </button>
+                </div>
+            `;
+        }
+    }, 10000); // 10 segundos
+
     try {
         // Verificar y sincronizar sesión antes de cargar datos
         if (!window.currentUser) {
@@ -289,6 +304,9 @@ async function loadIncidents() {
             `;
             if (typeof window.showToast === 'function') window.showToast('Error al cargar las incidencias');
         }
+    } finally {
+        // Asegurar que el timeout se cancele y el loading se desactive
+        if (timeoutId) clearTimeout(timeoutId);
     }
 }
 

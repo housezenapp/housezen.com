@@ -119,32 +119,44 @@ async function initializeAuth() {
     startTokenExpiryMonitor();
 }
 
-// Nueva función para manejar visibilidad de la página
+// Función para manejar visibilidad de la página - Re-fetch inteligente
 function setupVisibilityListener() {
     let wasHidden = false;
 
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && authInitialized && wasHidden) {
-            console.log('%c👁️ Pestaña visible de nuevo - Cerrando sesión automáticamente', 'background: #E67E22; color: white; padding: 4px 8px; border-radius: 4px;');
+            console.log('%c👁️ Pestaña visible de nuevo - Verificando sesión y recargando datos', 'background: #E67E22; color: white; padding: 4px 8px; border-radius: 4px;');
 
-            // Cerrar sesión automáticamente cuando vuelves a la pestaña
-            // Esto asegura que se recupere la conexión con Supabase
-            console.log('%c🚪 Cerrando sesión...', 'color: #E74C3C;');
-            
-            // Limpiar storage inmediatamente
-            localStorage.clear();
-            sessionStorage.clear();
-
-            // Intentar cerrar sesión en Supabase sin esperar (fire and forget)
-            if (window._supabase) {
-                window._supabase.auth.signOut().catch(err => {
-                    console.log('%c⚠️ Error al cerrar sesión en Supabase (ignorado):', 'color: orange;', err.message);
-                });
+            // Verificar que hay una sesión activa antes de recargar datos
+            if (window._supabase && window.currentUser) {
+                try {
+                    const { data: { session } } = await window._supabase.auth.getSession();
+                    if (session) {
+                        console.log('%c✅ Sesión activa encontrada, recargando datos...', 'color: green;');
+                        
+                        // Re-disparar la función de carga de datos según la página activa
+                        const activePage = document.querySelector('.page.active');
+                        if (activePage) {
+                            const pageId = activePage.id;
+                            
+                            if (pageId === 'page-incidencias' && typeof window.renderIncidents === 'function') {
+                                await window.renderIncidents(true); // forceRefresh = true
+                            } else if (pageId === 'page-profile' && typeof window.loadProfileData === 'function') {
+                                await window.loadProfileData();
+                            }
+                        } else {
+                            // Si no hay página activa, intentar cargar incidencias por defecto
+                            if (typeof window.renderIncidents === 'function') {
+                                await window.renderIncidents(true);
+                            }
+                        }
+                    } else {
+                        console.log('%c⚠️ No hay sesión activa al volver a la pestaña', 'color: orange;');
+                    }
+                } catch (err) {
+                    console.error('%c❌ Error verificando sesión:', 'color: red;', err);
+                }
             }
-
-            // Recargar la página para que el usuario vuelva a iniciar sesión
-            console.log('%c🔄 Recargando página...', 'color: #3498DB;');
-            window.location.reload();
 
         } else if (document.hidden) {
             console.log('%c😴 Pestaña oculta', 'color: #95A5A6;');

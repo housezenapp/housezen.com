@@ -257,20 +257,41 @@ async function handleSubmit(e) {
 
 async function renderIncidents(forceRefresh = false) {
     const container = document.getElementById('incidents-list-container');
+    if (!container) return;
 
     const localData = localStorage.getItem('cache_incidencias');
+    let timeoutId = null;
+    let loadingShown = false;
 
     // Solo mostrar caché si no es un refresh forzado
     if (localData && !forceRefresh) {
         const incidents = JSON.parse(localData);
         dibujarIncidencias(incidents, true);
     } else {
+        loadingShown = true;
         container.innerHTML = `
             <div class="loading-state">
                 <i class="fa-solid fa-spinner fa-spin"></i>
                 <div class="empty-state-text">Cargando reportes...</div>
             </div>
         `;
+        
+        // Timeout de 10 segundos para evitar loading infinito
+        timeoutId = setTimeout(() => {
+            if (loadingShown && container.querySelector('.loading-state')) {
+                console.warn('⏱️ Timeout al cargar incidencias');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-clock"></i>
+                        <div class="empty-state-text">La carga está tardando demasiado</div>
+                        <button class="submit-btn" style="margin-top: 20px; max-width: 250px;" onclick="renderIncidents(true)">
+                            <i class="fa-solid fa-rotate"></i> Reintentar
+                        </button>
+                    </div>
+                `;
+                loadingShown = false;
+            }
+        }, 10000);
     }
 
     try {
@@ -279,6 +300,7 @@ async function renderIncidents(forceRefresh = false) {
             if (session) {
                 window.currentUser = session.user;
             } else {
+                if (timeoutId) clearTimeout(timeoutId);
                 return;
             }
         }
@@ -304,10 +326,11 @@ async function renderIncidents(forceRefresh = false) {
 
         localStorage.setItem('cache_incidencias', JSON.stringify(data));
         dibujarIncidencias(data, false);
+        loadingShown = false;
 
     } catch (err) {
         console.error("Error de red:", err);
-        if (!localData) {
+        if (!localData && container) {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fa-solid fa-wifi-slash"></i>
@@ -318,8 +341,15 @@ async function renderIncidents(forceRefresh = false) {
                 </div>
             `;
         }
+        loadingShown = false;
+    } finally {
+        // Asegurar que el timeout se cancele y el loading se desactive
+        if (timeoutId) clearTimeout(timeoutId);
     }
 }
+
+// Exponer globalmente
+window.renderIncidents = renderIncidents;
 
 function dibujarIncidencias(data, isOffline) {
     const container = document.getElementById('incidents-list-container');

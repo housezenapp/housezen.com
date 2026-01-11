@@ -18,6 +18,21 @@ async function loadProperties() {
 
     container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Cargando tus propiedades...</div>';
 
+    let timeoutId = setTimeout(() => {
+        if (container && container.querySelector('.loading-state')) {
+            console.warn('⏱️ Timeout al cargar propiedades');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-clock"></i>
+                    <div class="empty-state-text">La carga está tardando demasiado</div>
+                    <button class="submit-btn" style="margin-top: 20px; max-width: 250px;" onclick="window.loadProperties()">
+                        <i class="fa-solid fa-rotate"></i> Reintentar
+                    </button>
+                </div>
+            `;
+        }
+    }, 10000); // 10 segundos
+
     try {
         // Verificar y sincronizar sesión antes de cargar datos
         if (!window.currentUser) {
@@ -97,6 +112,9 @@ async function loadProperties() {
         } else {
             container.innerHTML = '<p class="error-msg">Error al conectar con la base de datos. Recarga la página.</p>';
         }
+    } finally {
+        // Asegurar que el timeout se cancele y el loading se desactive
+        if (timeoutId) clearTimeout(timeoutId);
     }
 }
 
