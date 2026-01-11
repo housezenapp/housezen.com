@@ -295,21 +295,75 @@ async function renderIncidents(forceRefresh = false) {
     }
 
     try {
-        if (!window.currentUser) {
-            const { data: { session } } = await window._supabase.auth.getSession();
-            if (session) {
-                window.currentUser = session.user;
-            } else {
-                if (timeoutId) clearTimeout(timeoutId);
-                return;
-            }
+        // Verificar sesión antes de hacer la query
+        console.log('%c🔍 Verificando sesión antes de cargar incidencias...', 'color: #3498DB;');
+        const { data: { session: currentSession }, error: sessionError } = await window._supabase.auth.getSession();
+        
+        if (sessionError || !currentSession) {
+            console.error('%c❌ No hay sesión válida:', 'color: red;', sessionError);
+            if (timeoutId) clearTimeout(timeoutId);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    <div class="empty-state-text">Sesión expirada. Por favor, recarga la página.</div>
+                </div>
+            `;
+            return;
         }
 
-        const { data, error } = await window._supabase
+        window.currentUser = currentSession.user;
+        console.log('%c✅ Sesión válida encontrada:', 'color: green;', currentSession.user.email);
+
+        // Forzar refresh de sesión si la pestaña estuvo inactiva para reactivar la conexión
+        console.log('%c🔄 Refrescando sesión para reactivar conexión...', 'color: #9B59B6;');
+        try {
+            const { data: { session: refreshedSession }, error: refreshError } = await window._supabase.auth.refreshSession();
+            if (!refreshError && refreshedSession) {
+                window.currentUser = refreshedSession.user;
+                console.log('%c✅ Sesión refrescada exitosamente', 'color: green;');
+            } else {
+                console.warn('%c⚠️ Error al refrescar sesión (continuando con sesión anterior):', 'color: orange;', refreshError);
+            }
+        } catch (refreshErr) {
+            console.warn('%c⚠️ Excepción al refrescar sesión (continuando):', 'color: orange;', refreshErr);
+        }
+
+        // Hacer la query con un timeout más corto (3 segundos) para detectar problemas de conectividad
+        console.log('%c📡 Ejecutando query a Supabase...', 'color: #3498DB;');
+        const queryPromise = window._supabase
             .from('incidencias')
             .select('*')
             .eq('user_id', window.currentUser.id)
             .order('created_at', { ascending: false });
+
+        // Hacer la query con verificación de timeout
+        let queryResult;
+        try {
+            queryResult = await Promise.race([
+                queryPromise,
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Query timeout después de 3 segundos')), 3000)
+                )
+            ]);
+        } catch (timeoutError) {
+            // Si hay timeout, intentar refrescar sesión y reintentar una vez más
+            console.warn('%c⏱️ Query timeout detectado, intentando refresh y reintento...', 'color: orange;');
+            try {
+                await window._supabase.auth.refreshSession();
+                console.log('%c🔄 Sesión refrescada, reintentando query...', 'color: #9B59B6;');
+                // Reintentar la query una vez más
+                queryResult = await window._supabase
+                    .from('incidencias')
+                    .select('*')
+                    .eq('user_id', window.currentUser.id)
+                    .order('created_at', { ascending: false });
+            } catch (retryError) {
+                console.error('%c❌ Error al reintentar después de timeout:', 'color: red;', retryError);
+                throw timeoutError; // Si el reintento falla, lanzar el error original
+            }
+        }
+
+        const { data, error } = queryResult;
 
         if (error) {
             console.error("Error loading incidents:", error);
