@@ -21,15 +21,16 @@ async function loadProperties() {
     let timeoutId = setTimeout(() => {
         if (container && container.querySelector('.loading-state')) {
             console.warn('⏱️ Timeout al cargar propiedades');
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fa-solid fa-clock"></i>
-                    <div class="empty-state-text">La carga está tardando demasiado</div>
-                    <button class="submit-btn" style="margin-top: 20px; max-width: 250px;" onclick="window.loadProperties()">
-                        <i class="fa-solid fa-rotate"></i> Reintentar
-                    </button>
-                </div>
-            `;
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-clock"></i>
+                        <div class="empty-state-text">La carga está tardando demasiado</div>
+                        <button class="refresh-page-btn" onclick="window.location.reload();">
+                            <i class="fa-solid fa-arrow-rotate-right"></i>
+                            <span>Refrescar página</span>
+                        </button>
+                    </div>
+                `;
         }
     }, 10000); // 10 segundos
 

@@ -1187,6 +1187,41 @@ textarea {
     font-weight: 600;
 }
 
+.refresh-page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(20,184,166,0.25);
+    margin-top: 16px;
+}
+
+.refresh-page-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(20,184,166,0.35);
+}
+
+.refresh-page-btn:active {
+    transform: translateY(0);
+}
+
+.refresh-page-btn i {
+    font-size: 0.85rem;
+}
+
+.refresh-page-btn span {
+    font-weight: 600;
+}
+
 .loading-state {
     text-align: center;
     padding: 60px 20px;

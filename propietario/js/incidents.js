@@ -21,8 +21,9 @@ async function loadIncidents() {
                 <div class="empty-state">
                     <i class="fa-solid fa-clock"></i>
                     <div class="empty-state-text">La carga está tardando demasiado</div>
-                    <button class="submit-btn" style="margin-top: 20px; max-width: 250px;" onclick="window.loadIncidents()">
-                        <i class="fa-solid fa-rotate"></i> Reintentar
+                    <button class="refresh-page-btn" onclick="window.location.reload();">
+                        <i class="fa-solid fa-arrow-rotate-right"></i>
+                        <span>Refrescar página</span>
                     </button>
                 </div>
             `;

@@ -15,6 +15,13 @@ function initializeInquilinoApp() {
         }
     }
     
+    // Verificar si hay que redirigir a una página específica después del reload
+    const redirectToPage = sessionStorage.getItem('redirectToPage');
+    if (redirectToPage && typeof window.showPage === 'function') {
+        sessionStorage.removeItem('redirectToPage');
+        window.showPage(redirectToPage);
+    }
+    
     setupPriorityButtons();
     
     const incidentForm = document.getElementById('incidentForm');

@@ -284,8 +284,9 @@ async function renderIncidents(forceRefresh = false) {
                     <div class="empty-state">
                         <i class="fa-solid fa-clock"></i>
                         <div class="empty-state-text">La carga está tardando demasiado</div>
-                        <button class="submit-btn" style="margin-top: 20px; max-width: 250px;" onclick="renderIncidents(true)">
-                            <i class="fa-solid fa-rotate"></i> Reintentar
+                        <button class="refresh-page-btn" onclick="sessionStorage.setItem('redirectToPage', 'incidencias'); window.location.reload();">
+                            <i class="fa-solid fa-arrow-rotate-right"></i>
+                            <span>Refrescar página</span>
                         </button>
                     </div>
                 `;
@@ -385,8 +386,9 @@ async function renderIncidents(forceRefresh = false) {
                 <div class="empty-state">
                     <i class="fa-solid fa-wifi-slash"></i>
                     <div class="empty-state-text">No se pudieron cargar los reportes</div>
-                    <button class="submit-btn" style="margin-top: 20px; max-width: 250px;" onclick="renderIncidents()">
-                        <i class="fa-solid fa-rotate"></i> Reintentar
+                    <button class="refresh-page-btn" onclick="sessionStorage.setItem('redirectToPage', 'incidencias'); window.location.reload();">
+                        <i class="fa-solid fa-arrow-rotate-right"></i>
+                        <span>Refrescar página</span>
                     </button>
                 </div>
             `;
