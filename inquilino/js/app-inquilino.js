@@ -23,41 +23,60 @@ function initializeInquilinoApp() {
     }
 
     // Configurar eventos de radio buttons y labels para categoría
+    // Remover listeners previos si existen (para evitar duplicados)
     const categoryOptions = document.querySelectorAll('.cat-option');
     categoryOptions.forEach(option => {
         const radio = option.querySelector('input[name="category"]');
         if (radio) {
             // Agregar listener al label para capturar el click
             option.addEventListener('click', function(e) {
-                // Guardar el estado ANTES de que el evento nativo del label marque el radio
+                // Prevenir el comportamiento por defecto del label
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Guardar el estado actual
                 const wasChecked = radio.checked;
                 
-                // Permitir que el evento nativo ocurra primero
-                setTimeout(() => {
-                    // Si el radio ya estaba marcado antes del click, desmarcarlo
-                    if (wasChecked && radio.checked) {
-                        radio.checked = false;
-                        lastRadioChecked = null;
-                        
-                        // Limpiar todos los radios del grupo para asegurar que ninguno esté marcado
-                        const allRadios = document.querySelectorAll('input[name="category"]');
-                        allRadios.forEach(r => r.checked = false);
-                        
-                        // Si es "Otros", ocultar dropdown y limpiar
-                        const dropdown = document.getElementById('otros-dropdown');
-                        const selectedDisplay = document.getElementById('otros-selected');
-                        const otrosSelect = document.getElementById('otros-select');
-                        if (dropdown) dropdown.style.display = 'none';
-                        if (selectedDisplay) selectedDisplay.style.display = 'none';
-                        if (otrosSelect) otrosSelect.selectedIndex = 0;
-                        if (radio.id === 'otros-radio') {
-                            radio.value = 'Otros';
-                        }
-                    } else if (radio.checked && !wasChecked) {
-                        // Si se marcó (no estaba marcado antes), procesar normalmente
-                        handleRadioClick(radio);
+                // Si ya estaba marcado, desmarcarlo
+                if (wasChecked) {
+                    radio.checked = false;
+                    lastRadioChecked = null;
+                    
+                    // Limpiar todos los radios del grupo
+                    const allRadios = document.querySelectorAll('input[name="category"]');
+                    allRadios.forEach(r => r.checked = false);
+                    
+                    // Si es "Otros", ocultar dropdown y limpiar
+                    const dropdown = document.getElementById('otros-dropdown');
+                    const selectedDisplay = document.getElementById('otros-selected');
+                    const otrosSelect = document.getElementById('otros-select');
+                    if (dropdown) dropdown.style.display = 'none';
+                    if (selectedDisplay) selectedDisplay.style.display = 'none';
+                    if (otrosSelect) otrosSelect.selectedIndex = 0;
+                    if (radio.id === 'otros-radio') {
+                        radio.value = 'Otros';
                     }
-                }, 0);
+                    
+                    // Disparar evento change para que otros listeners sepan del cambio
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    // Si no estaba marcado, marcarlo
+                    radio.checked = true;
+                    
+                    // Desmarcar los demás radios del grupo
+                    const allRadios = document.querySelectorAll('input[name="category"]');
+                    allRadios.forEach(r => {
+                        if (r !== radio) {
+                            r.checked = false;
+                        }
+                    });
+                    
+                    // Procesar el cambio
+                    handleRadioClick(radio);
+                    
+                    // Disparar evento change
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             });
             
             // También agregar listener al radio directamente para manejar cambios
