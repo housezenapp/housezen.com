@@ -23,18 +23,24 @@ function initializeInquilinoApp() {
     }
 
     // Configurar eventos de radio buttons y labels para categoría
-    // Remover listeners previos si existen (para evitar duplicados)
     const categoryOptions = document.querySelectorAll('.cat-option');
     categoryOptions.forEach(option => {
         const radio = option.querySelector('input[name="category"]');
-        if (radio) {
-            // Agregar listener al label para capturar el click
-            option.addEventListener('click', function(e) {
-                // Prevenir el comportamiento por defecto del label
+        const catCard = option.querySelector('.cat-card');
+        if (radio && catCard) {
+            let isHandling = false; // Flag para prevenir dobles ejecuciones
+            
+            // Función para manejar la selección/deselección
+            const handleCategoryToggle = function(e) {
+                // Prevenir dobles ejecuciones
+                if (isHandling) return;
+                isHandling = true;
+                
+                // Prevenir el comportamiento por defecto
                 e.preventDefault();
                 e.stopPropagation();
                 
-                // Guardar el estado actual
+                // Guardar el estado actual ANTES de modificar
                 const wasChecked = radio.checked;
                 
                 // Si ya estaba marcado, desmarcarlo
@@ -77,7 +83,27 @@ function initializeInquilinoApp() {
                     // Disparar evento change
                     radio.dispatchEvent(new Event('change', { bubbles: true }));
                 }
-            });
+                
+                // Resetear el flag después de un pequeño delay
+                setTimeout(() => {
+                    isHandling = false;
+                }, 100);
+            };
+            
+            // Detectar si es dispositivo táctil o desktop
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            
+            // Agregar listener directamente al label (option)
+            // En desktop usar mousedown, en móvil usar click
+            if (isTouchDevice) {
+                // Dispositivos táctiles (móvil)
+                option.addEventListener('click', handleCategoryToggle, { passive: false });
+            } else {
+                // Desktop - usar mousedown en lugar de click
+                option.addEventListener('mousedown', handleCategoryToggle, { passive: false });
+                // También agregar click como fallback
+                option.addEventListener('click', handleCategoryToggle, { passive: false });
+            }
             
             // También agregar listener al radio directamente para manejar cambios
             radio.addEventListener('change', function() {
