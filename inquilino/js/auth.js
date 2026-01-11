@@ -22,14 +22,96 @@ async function logout() {
     sessionStorage.clear();
 
     // Intentar cerrar sesión en Supabase sin esperar (fire and forget)
-    _supabase.auth.signOut().catch(err => {
-        console.log('%c⚠️ Error al cerrar sesión en Supabase (ignorado):', 'color: orange;', err.message);
-    });
+    if (window._supabase) {
+        window._supabase.auth.signOut().catch(err => {
+            console.log('%c⚠️ Error al cerrar sesión en Supabase (ignorado):', 'color: orange;', err.message);
+        });
+    }
 
     // Redirigir inmediatamente
     console.log('%c↩️ Redirigiendo al login...', 'color: #3498DB;');
     window.location.href = "https://housezenapp.github.io/housezen/";
 }
+
+// Función helper para verificar y refrescar token antes de queries
+// Retorna true si la sesión es válida, false si no (y ya redirigió al login)
+async function ensureValidToken() {
+    try {
+        if (!window._supabase) {
+            console.error('%c❌ Supabase no está inicializado', 'color: red;');
+            return false;
+        }
+
+        // Obtener sesión actual
+        const { data: { session }, error: sessionError } = await window._supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+            console.error('%c❌ No hay sesión válida:', 'color: red;', sessionError);
+            // Limpiar y redirigir al login
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = "https://housezenapp.github.io/housezen/";
+            return false;
+        }
+
+        // Verificar expiración del token
+        const expiresAt = session.expires_at; // timestamp en segundos
+        const now = Math.floor(Date.now() / 1000); // timestamp actual en segundos
+        const timeUntilExpiry = expiresAt - now; // segundos hasta expiración
+
+        console.log('%c🔍 Token expira en:', timeUntilExpiry, 'segundos', 'color: #3498DB;');
+
+        // Si el token está expirado o le quedan menos de 60 segundos, forzar refresh
+        if (timeUntilExpiry < 60) {
+            console.log('%c🔄 Token expirado o próximo a expirar, refrescando...', 'color: orange; font-weight: bold;');
+            
+            try {
+                const { data: { session: newSession }, error: refreshError } = await window._supabase.auth.refreshSession();
+                
+                if (refreshError || !newSession) {
+                    console.error('%c❌ Error al refrescar sesión:', 'color: red; font-weight: bold;', refreshError);
+                    
+                    // Gestión de errores: limpiar y redirigir al login
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.currentUser = null;
+                    window.location.href = "https://housezenapp.github.io/housezen/";
+                    return false;
+                }
+
+                // Actualizar usuario y sesión
+                window.currentUser = newSession.user;
+                console.log('%c✅ Token refrescado exitosamente', 'color: green;');
+                return true;
+            } catch (refreshErr) {
+                console.error('%c❌ Excepción al refrescar sesión:', 'color: red; font-weight: bold;', refreshErr);
+                
+                // Gestión de errores: limpiar y redirigir al login
+                localStorage.clear();
+                sessionStorage.clear();
+                window.currentUser = null;
+                window.location.href = "https://housezenapp.github.io/housezen/";
+                return false;
+            }
+        }
+
+        // Token válido, actualizar usuario
+        window.currentUser = session.user;
+        return true;
+
+    } catch (err) {
+        console.error('%c❌ Error verificando token:', 'color: red; font-weight: bold;', err);
+        // Limpiar y redirigir al login
+        localStorage.clear();
+        sessionStorage.clear();
+        window.currentUser = null;
+        window.location.href = "https://housezenapp.github.io/housezen/";
+        return false;
+    }
+}
+
+// Exponer función globalmente
+window.ensureValidToken = ensureValidToken;
 
 async function initializeAuth() {
     _supabase.auth.onAuthStateChange(async (event, session) => {
@@ -119,39 +201,56 @@ async function initializeAuth() {
     startTokenExpiryMonitor();
 }
 
-// Función para manejar visibilidad de la página - Re-fetch inteligente
+// Función para manejar visibilidad de la página - Re-fetch inteligente con re-inicialización
 function setupVisibilityListener() {
     let wasHidden = false;
 
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && authInitialized && wasHidden) {
-            console.log('%c👁️ Pestaña visible de nuevo - Verificando sesión y recargando datos', 'background: #E67E22; color: white; padding: 4px 8px; border-radius: 4px;');
+            console.log('%c👁️ Pestaña visible de nuevo - Verificando conexión y recargando datos', 'background: #E67E22; color: white; padding: 4px 8px; border-radius: 4px;');
 
-            // Verificar que hay una sesión activa antes de recargar datos
+            // Pausa de recuperación: esperar 500ms para que el SO recupere la conexión
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Debug de red
+            console.log('%c🌐 Estado de red:', navigator.onLine ? 'ONLINE' : 'OFFLINE', 'color: ' + (navigator.onLine ? 'green' : 'red') + ';');
+
+            // Reconectar Supabase antes de verificar sesión
+            if (typeof window.reconnectSupabase === 'function') {
+                const reconnected = window.reconnectSupabase();
+                if (!reconnected) {
+                    console.error('%c❌ No se pudo reconectar Supabase', 'color: red;');
+                    return;
+                }
+            }
+
+            // Verificar que hay una sesión activa después de reconectar
             if (window._supabase && window.currentUser) {
                 try {
+                    // Verificar sesión con el nuevo cliente
                     const { data: { session } } = await window._supabase.auth.getSession();
-                    if (session) {
-                        console.log('%c✅ Sesión activa encontrada, recargando datos...', 'color: green;');
+                    if (!session) {
+                        console.log('%c⚠️ No hay sesión activa al volver a la pestaña', 'color: orange;');
+                        return;
+                    }
+
+                    console.log('%c✅ Sesión activa encontrada en nuevo cliente', 'color: green;');
+
+                    // Re-disparar la función de carga de datos según la página activa
+                    const activePage = document.querySelector('.page.active');
+                    if (activePage) {
+                        const pageId = activePage.id;
                         
-                        // Re-disparar la función de carga de datos según la página activa
-                        const activePage = document.querySelector('.page.active');
-                        if (activePage) {
-                            const pageId = activePage.id;
-                            
-                            if (pageId === 'page-incidencias' && typeof window.renderIncidents === 'function') {
-                                await window.renderIncidents(true); // forceRefresh = true
-                            } else if (pageId === 'page-profile' && typeof window.loadProfileData === 'function') {
-                                await window.loadProfileData();
-                            }
-                        } else {
-                            // Si no hay página activa, intentar cargar incidencias por defecto
-                            if (typeof window.renderIncidents === 'function') {
-                                await window.renderIncidents(true);
-                            }
+                        if (pageId === 'page-incidencias' && typeof window.renderIncidents === 'function') {
+                            await window.renderIncidents(true); // forceRefresh = true
+                        } else if (pageId === 'page-profile' && typeof window.loadProfileData === 'function') {
+                            await window.loadProfileData();
                         }
                     } else {
-                        console.log('%c⚠️ No hay sesión activa al volver a la pestaña', 'color: orange;');
+                        // Si no hay página activa, intentar cargar incidencias por defecto
+                        if (typeof window.renderIncidents === 'function') {
+                            await window.renderIncidents(true);
+                        }
                     }
                 } catch (err) {
                     console.error('%c❌ Error verificando sesión:', 'color: red;', err);

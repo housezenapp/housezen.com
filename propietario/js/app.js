@@ -75,6 +75,77 @@ if (typeof supabase !== 'undefined') {
     console.error("❌ Error: La librería de Supabase no se ha cargado. Revisa tu index.html");
 }
 
+// Función para re-inicializar el cliente de Supabase (legacy, mantener por compatibilidad)
+window.reinitializeSupabaseClient = function() {
+    console.log("🔄 Re-inicializando cliente de Supabase...");
+    try {
+        if (typeof supabase === 'undefined') {
+            console.error("❌ Librería de Supabase no disponible");
+            return false;
+        }
+
+        // Crear nuevo cliente
+        window._supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true
+            }
+        });
+
+        console.log("✅ Cliente de Supabase re-inicializado");
+        return true;
+    } catch (err) {
+        console.error("❌ Error re-inicializando cliente:", err);
+        return false;
+    }
+};
+
+// Función para reconectar Supabase completamente (crear nueva instancia)
+window.reconnectSupabase = function() {
+    console.log("🔄 Reconectando Supabase - Creando nueva instancia...");
+    
+    try {
+        // Limpiar suscripciones de Realtime si existen para evitar saturar memoria
+        if (window._supabase) {
+            try {
+                // Intentar limpiar canales de Realtime
+                const realtime = window._supabase.realtime;
+                if (realtime && typeof realtime.removeAllChannels === 'function') {
+                    realtime.removeAllChannels();
+                    console.log("🧹 Suscripciones de Realtime limpiadas");
+                }
+            } catch (realtimeError) {
+                console.warn("⚠️ Error limpiando Realtime (continuando):", realtimeError);
+            }
+        }
+
+        // Paso 1: Poner el objeto a null
+        window._supabase = null;
+        console.log("✅ Cliente anterior eliminado");
+
+        // Paso 2: Crear nueva instancia con createClient
+        if (typeof supabase === 'undefined') {
+            console.error("❌ Librería de Supabase no disponible");
+            return false;
+        }
+
+        window._supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true
+            }
+        });
+
+        console.log("✅ Nuevo cliente de Supabase creado");
+        return true;
+    } catch (err) {
+        console.error("❌ Error reconectando Supabase:", err);
+        return false;
+    }
+};
+
 // Función de diagnóstico
 function diagnosticCheck() {
     console.log("🔍 DIAGNÓSTICO INICIAL:");

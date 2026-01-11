@@ -261,8 +261,14 @@ async function forceLogout() {
     console.log("🚨 Forzando cierre de sesión debido a problemas de autenticación...");
     window.currentUser = null;
     
+    // Limpiar storage inmediatamente
+    localStorage.clear();
+    sessionStorage.clear();
+    
     try {
-        await window._supabase.auth.signOut();
+        if (window._supabase) {
+            await window._supabase.auth.signOut();
+        }
     } catch (error) {
         console.error("Error al cerrar sesión:", error);
     }
@@ -280,86 +286,128 @@ async function forceLogout() {
     }
 }
 
-// Función para verificar y refrescar la sesión
+// Función para verificar y refrescar la sesión (legacy, mantener por compatibilidad)
 async function checkAndRefreshSession() {
+    return await ensureValidToken();
+}
+
+// Función helper para verificar y refrescar token antes de queries
+// Retorna true si la sesión es válida, false si no (y ya redirigió al login)
+async function ensureValidToken() {
     try {
-        const { data: { session }, error } = await window._supabase.auth.getSession();
-        
-        if (error) {
-            console.error("❌ Error al verificar sesión:", error);
+        if (!window._supabase) {
+            console.error("❌ Supabase no está inicializado");
             await forceLogout();
             return false;
         }
+
+        // Obtener sesión actual
+        const { data: { session }, error: sessionError } = await window._supabase.auth.getSession();
         
-        if (!session) {
-            console.log("⚠️ No hay sesión activa");
-            window.currentUser = null;
+        if (sessionError || !session) {
+            console.error("❌ No hay sesión válida:", sessionError);
+            await forceLogout();
             return false;
         }
-        
-        // Verificar si el token está próximo a expirar (menos de 5 minutos)
-        const expiresAt = session.expires_at;
-        const now = Math.floor(Date.now() / 1000);
-        const timeUntilExpiry = expiresAt - now;
-        
-        if (timeUntilExpiry < 300) { // 5 minutos
-            console.log("🔄 Token próximo a expirar, refrescando...");
-            const { data: { session: newSession }, error: refreshError } = await window._supabase.auth.refreshSession();
+
+        // Verificar expiración del token
+        const expiresAt = session.expires_at; // timestamp en segundos
+        const now = Math.floor(Date.now() / 1000); // timestamp actual en segundos
+        const timeUntilExpiry = expiresAt - now; // segundos hasta expiración
+
+        console.log("🔍 Token expira en:", timeUntilExpiry, "segundos");
+
+        // Si el token está expirado o le quedan menos de 60 segundos, forzar refresh
+        if (timeUntilExpiry < 60) {
+            console.log("🔄 Token expirado o próximo a expirar, refrescando...");
             
-            if (refreshError || !newSession) {
-                console.error("❌ Error al refrescar sesión:", refreshError);
+            try {
+                const { data: { session: newSession }, error: refreshError } = await window._supabase.auth.refreshSession();
+                
+                if (refreshError || !newSession) {
+                    console.error("❌ Error al refrescar sesión:", refreshError);
+                    await forceLogout();
+                    return false;
+                }
+
+                // Actualizar usuario y sesión
+                window.currentUser = newSession.user;
+                console.log("✅ Token refrescado exitosamente");
+                return true;
+            } catch (refreshErr) {
+                console.error("❌ Excepción al refrescar sesión:", refreshErr);
                 await forceLogout();
                 return false;
             }
-            
-            window.currentUser = newSession.user;
-            return true;
         }
-        
+
+        // Token válido, actualizar usuario
         window.currentUser = session.user;
         return true;
-    } catch (error) {
-        console.error("❌ Error al verificar sesión:", error);
+
+    } catch (err) {
+        console.error("❌ Error verificando token:", err);
         await forceLogout();
         return false;
     }
 }
 
-// Listener para re-fetch inteligente al volver a la pestaña
+// Exponer función globalmente
+window.ensureValidToken = ensureValidToken;
+window.checkAndRefreshSession = checkAndRefreshSession;
+
+// Listener para re-fetch inteligente al volver a la pestaña con re-inicialización
 function setupVisibilityListener() {
     let wasHidden = false;
 
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && authInitialized && wasHidden) {
-            console.log("👁️ Pestaña visible de nuevo - Verificando sesión y recargando datos");
+            console.log("👁️ Pestaña visible de nuevo - Verificando conexión y recargando datos");
 
-            // Verificar que hay una sesión activa antes de recargar datos
+            // Pausa de recuperación: esperar 500ms para que el SO recupere la conexión
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Debug de red
+            console.log("🌐 Estado de red:", navigator.onLine ? "ONLINE" : "OFFLINE");
+
+            // Reconectar Supabase antes de verificar sesión
+            if (typeof window.reconnectSupabase === 'function') {
+                const reconnected = window.reconnectSupabase();
+                if (!reconnected) {
+                    console.error("❌ No se pudo reconectar Supabase");
+                    return;
+                }
+            }
+
+            // Verificar que hay una sesión activa después de reconectar
             if (window._supabase && window.currentUser) {
                 try {
+                    // Verificar sesión con el nuevo cliente
                     const { data: { session } } = await window._supabase.auth.getSession();
-                    if (session) {
-                        console.log("✅ Sesión activa encontrada, recargando datos...");
+                    if (!session) {
+                        console.log("⚠️ No hay sesión activa al volver a la pestaña");
+                        return;
+                    }
+
+                    console.log("✅ Sesión activa encontrada en nuevo cliente");
+                    
+                    // Re-disparar la función de carga de datos según la página activa
+                    const activePage = document.querySelector('.page.active');
+                    if (activePage) {
+                        const pageId = activePage.id;
                         
-                        // Re-disparar la función de carga de datos según la página activa
-                        const activePage = document.querySelector('.page.active');
-                        if (activePage) {
-                            const pageId = activePage.id;
-                            
-                            if (pageId === 'page-incidencias' && typeof window.loadIncidents === 'function') {
-                                await window.loadIncidents();
-                            } else if (pageId === 'page-propiedades' && typeof window.loadProperties === 'function') {
-                                await window.loadProperties();
-                            } else if (pageId === 'page-perfil' && typeof window.loadProfile === 'function') {
-                                window.loadProfile();
-                            }
-                        } else {
-                            // Si no hay página activa, intentar cargar incidencias por defecto
-                            if (typeof window.loadIncidents === 'function') {
-                                await window.loadIncidents();
-                            }
+                        if (pageId === 'page-incidencias' && typeof window.loadIncidents === 'function') {
+                            await window.loadIncidents();
+                        } else if (pageId === 'page-propiedades' && typeof window.loadProperties === 'function') {
+                            await window.loadProperties();
+                        } else if (pageId === 'page-perfil' && typeof window.loadProfile === 'function') {
+                            window.loadProfile();
                         }
                     } else {
-                        console.log("⚠️ No hay sesión activa al volver a la pestaña");
+                        // Si no hay página activa, intentar cargar incidencias por defecto
+                        if (typeof window.loadIncidents === 'function') {
+                            await window.loadIncidents();
+                        }
                     }
                 } catch (err) {
                     console.error("❌ Error verificando sesión:", err);

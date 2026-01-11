@@ -295,38 +295,34 @@ async function renderIncidents(forceRefresh = false) {
     }
 
     try {
-        // Verificar sesión antes de hacer la query
-        console.log('%c🔍 Verificando sesión antes de cargar incidencias...', 'color: #3498DB;');
-        const { data: { session: currentSession }, error: sessionError } = await window._supabase.auth.getSession();
+        // Validación preventiva: Verificar y refrescar token antes de la query
+        console.log('%c🔍 Verificando token antes de cargar incidencias...', 'color: #3498DB;');
         
-        if (sessionError || !currentSession) {
-            console.error('%c❌ No hay sesión válida:', 'color: red;', sessionError);
-            if (timeoutId) clearTimeout(timeoutId);
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fa-solid fa-exclamation-triangle"></i>
-                    <div class="empty-state-text">Sesión expirada. Por favor, recarga la página.</div>
-                </div>
-            `;
-            return;
-        }
-
-        window.currentUser = currentSession.user;
-        console.log('%c✅ Sesión válida encontrada:', 'color: green;', currentSession.user.email);
-
-        // Forzar refresh de sesión si la pestaña estuvo inactiva para reactivar la conexión
-        console.log('%c🔄 Refrescando sesión para reactivar conexión...', 'color: #9B59B6;');
-        try {
-            const { data: { session: refreshedSession }, error: refreshError } = await window._supabase.auth.refreshSession();
-            if (!refreshError && refreshedSession) {
-                window.currentUser = refreshedSession.user;
-                console.log('%c✅ Sesión refrescada exitosamente', 'color: green;');
-            } else {
-                console.warn('%c⚠️ Error al refrescar sesión (continuando con sesión anterior):', 'color: orange;', refreshError);
+        if (typeof window.ensureValidToken === 'function') {
+            const isValid = await window.ensureValidToken();
+            if (!isValid) {
+                // La función ya redirigió al login, solo limpiar timeout
+                if (timeoutId) clearTimeout(timeoutId);
+                return;
             }
-        } catch (refreshErr) {
-            console.warn('%c⚠️ Excepción al refrescar sesión (continuando):', 'color: orange;', refreshErr);
+        } else {
+            // Fallback si la función no está disponible
+            const { data: { session: currentSession }, error: sessionError } = await window._supabase.auth.getSession();
+            if (sessionError || !currentSession) {
+                console.error('%c❌ No hay sesión válida:', 'color: red;', sessionError);
+                if (timeoutId) clearTimeout(timeoutId);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <div class="empty-state-text">Sesión expirada. Por favor, recarga la página.</div>
+                    </div>
+                `;
+                return;
+            }
+            window.currentUser = currentSession.user;
         }
+
+        console.log('%c✅ Token válido confirmado', 'color: green;');
 
         // Hacer la query con un timeout más corto (3 segundos) para detectar problemas de conectividad
         console.log('%c📡 Ejecutando query a Supabase...', 'color: #3498DB;');

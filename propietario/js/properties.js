@@ -57,35 +57,32 @@ async function loadProperties() {
             }
         }
 
-        // Verificar sesión antes de cargar datos
-        console.log('🔍 Verificando sesión antes de cargar propiedades...');
-        const { data: { session: currentSession }, error: sessionError } = await window._supabase.auth.getSession();
+        // Validación preventiva: Verificar y refrescar token antes de la query
+        console.log('🔍 Verificando token antes de cargar propiedades...');
         
-        if (sessionError || !currentSession) {
-            console.error('❌ No hay sesión válida:', sessionError);
-            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-exclamation-triangle"></i><div class="empty-state-text">Sesión expirada. Por favor, recarga la página.</div></div>';
-            if (typeof window.forceLogout === 'function') {
-                await window.forceLogout();
+        if (typeof window.ensureValidToken === 'function') {
+            const isValid = await window.ensureValidToken();
+            if (!isValid) {
+                // La función ya redirigió al login, solo limpiar timeout
+                if (timeoutId) clearTimeout(timeoutId);
+                return;
             }
-            return;
+        } else {
+            // Fallback si la función no está disponible
+            const { data: { session: currentSession }, error: sessionError } = await window._supabase.auth.getSession();
+            if (sessionError || !currentSession) {
+                console.error('❌ No hay sesión válida:', sessionError);
+                if (timeoutId) clearTimeout(timeoutId);
+                container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-exclamation-triangle"></i><div class="empty-state-text">Sesión expirada. Por favor, recarga la página.</div></div>';
+                if (typeof window.forceLogout === 'function') {
+                    await window.forceLogout();
+                }
+                return;
+            }
+            window.currentUser = currentSession.user;
         }
 
-        window.currentUser = currentSession.user;
-        console.log('✅ Sesión válida encontrada:', currentSession.user.email);
-
-        // Forzar refresh de sesión para reactivar la conexión
-        console.log('🔄 Refrescando sesión para reactivar conexión...');
-        try {
-            const { data: { session: refreshedSession }, error: refreshError } = await window._supabase.auth.refreshSession();
-            if (!refreshError && refreshedSession) {
-                window.currentUser = refreshedSession.user;
-                console.log('✅ Sesión refrescada exitosamente');
-            } else {
-                console.warn('⚠️ Error al refrescar sesión (continuando con sesión anterior):', refreshError);
-            }
-        } catch (refreshErr) {
-            console.warn('⚠️ Excepción al refrescar sesión (continuando):', refreshErr);
-        }
+        console.log('✅ Token válido confirmado');
 
         // Verificar que Supabase esté inicializado
         if (!window._supabase) {
