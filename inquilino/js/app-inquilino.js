@@ -29,31 +29,36 @@ function initializeInquilinoApp() {
         if (radio) {
             // Agregar listener al label para capturar el click
             option.addEventListener('click', function(e) {
+                // Prevenir el comportamiento por defecto del label
+                e.preventDefault();
+                
                 // Guardar el estado antes del click
                 const wasChecked = radio.checked;
                 
-                // Usar setTimeout para que el evento nativo del label marque el radio primero
-                setTimeout(() => {
-                    // Si el radio ya estaba marcado antes del click, desmarcarlo
-                    if (wasChecked && radio.checked) {
-                        radio.checked = false;
-                        lastRadioChecked = null;
-                        
-                        // Si es "Otros", ocultar dropdown
-                        if (radio.id === 'otros-radio') {
-                            const dropdown = document.getElementById('otros-dropdown');
-                            const selectedDisplay = document.getElementById('otros-selected');
-                            const otrosSelect = document.getElementById('otros-select');
-                            if (dropdown) dropdown.style.display = 'none';
-                            if (selectedDisplay) selectedDisplay.style.display = 'none';
-                            if (otrosSelect) otrosSelect.selectedIndex = 0;
-                            radio.value = 'Otros';
-                        }
-                    } else if (radio.checked && !wasChecked) {
-                        // Si se marcó (no estaba marcado antes), procesar normalmente
-                        handleRadioClick(radio);
+                // Si el radio ya estaba marcado, desmarcarlo
+                if (wasChecked) {
+                    radio.checked = false;
+                    lastRadioChecked = null;
+                    
+                    // Limpiar todos los radios del grupo para asegurar que ninguno esté marcado
+                    const allRadios = document.querySelectorAll('input[name="category"]');
+                    allRadios.forEach(r => r.checked = false);
+                    
+                    // Si es "Otros", ocultar dropdown y limpiar
+                    const dropdown = document.getElementById('otros-dropdown');
+                    const selectedDisplay = document.getElementById('otros-selected');
+                    const otrosSelect = document.getElementById('otros-select');
+                    if (dropdown) dropdown.style.display = 'none';
+                    if (selectedDisplay) selectedDisplay.style.display = 'none';
+                    if (otrosSelect) otrosSelect.selectedIndex = 0;
+                    if (radio.id === 'otros-radio') {
+                        radio.value = 'Otros';
                     }
-                }, 0);
+                } else {
+                    // Si no estaba marcado, marcarlo y procesar normalmente
+                    radio.checked = true;
+                    handleRadioClick(radio);
+                }
             });
             
             // También agregar listener al radio directamente para manejar cambios
