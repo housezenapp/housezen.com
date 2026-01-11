@@ -30,6 +30,10 @@ function showPage(pageId) {
 
     if (pageId === 'incidencias') {
         renderIncidents();
+        // Asegurar que el botón de refrescar esté visible
+        if (typeof window.updateRefreshButton === 'function') {
+            setTimeout(() => window.updateRefreshButton(), 100);
+        }
     }
 
     if (pageId === 'profile') {

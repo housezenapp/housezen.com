@@ -259,6 +259,9 @@ async function renderIncidents(forceRefresh = false) {
     const container = document.getElementById('incidents-list-container');
     if (!container) return;
 
+    // Actualizar el botón de refrescar en el título (siempre visible)
+    updateRefreshButton();
+
     const localData = localStorage.getItem('cache_incidencias');
     let timeoutId = null;
     let loadingShown = false;
@@ -266,7 +269,7 @@ async function renderIncidents(forceRefresh = false) {
     // Solo mostrar caché si no es un refresh forzado
     if (localData && !forceRefresh) {
         const incidents = JSON.parse(localData);
-        dibujarIncidencias(incidents, true);
+        dibujarIncidencias(incidents, false);
     } else {
         loadingShown = true;
         container.innerHTML = `
@@ -275,24 +278,6 @@ async function renderIncidents(forceRefresh = false) {
                 <div class="empty-state-text">Cargando reportes...</div>
             </div>
         `;
-        
-        // Timeout de 5 segundos para evitar loading infinito
-        timeoutId = setTimeout(() => {
-            if (loadingShown && container.querySelector('.loading-state')) {
-                console.warn('⏱️ Timeout al cargar incidencias');
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fa-solid fa-clock"></i>
-                        <div class="empty-state-text">La carga está tardando demasiado</div>
-                        <button class="refresh-page-btn" onclick="sessionStorage.setItem('redirectToPage', 'incidencias'); window.location.reload();">
-                            <i class="fa-solid fa-arrow-rotate-right"></i>
-                            <span>Refrescar página</span>
-                        </button>
-                    </div>
-                `;
-                loadingShown = false;
-            }
-        }, 5000);
     }
 
     try {
@@ -386,10 +371,6 @@ async function renderIncidents(forceRefresh = false) {
                 <div class="empty-state">
                     <i class="fa-solid fa-wifi-slash"></i>
                     <div class="empty-state-text">No se pudieron cargar los reportes</div>
-                    <button class="refresh-page-btn" onclick="sessionStorage.setItem('redirectToPage', 'incidencias'); window.location.reload();">
-                        <i class="fa-solid fa-arrow-rotate-right"></i>
-                        <span>Refrescar página</span>
-                    </button>
                 </div>
             `;
         }
@@ -397,11 +378,38 @@ async function renderIncidents(forceRefresh = false) {
     } finally {
         // Asegurar que el timeout se cancele y el loading se desactive
         if (timeoutId) clearTimeout(timeoutId);
+        
+        // Actualizar el botón después de cualquier operación
+        updateRefreshButton();
     }
 }
 
 // Exponer globalmente
 window.renderIncidents = renderIncidents;
+
+// Función para actualizar el botón de refrescar en el título
+function updateRefreshButton() {
+    const pageTitle = document.querySelector('#page-incidencias .page-title');
+    if (!pageTitle) return;
+
+    // Verificar si el botón ya existe
+    let refreshBtn = pageTitle.querySelector('.refresh-incidents-btn');
+    
+    if (!refreshBtn) {
+        // Crear el botón si no existe
+        refreshBtn = document.createElement('button');
+        refreshBtn.className = 'refresh-incidents-btn';
+        refreshBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i><span>Nuevas incidencias</span>';
+        refreshBtn.onclick = () => {
+            sessionStorage.setItem('redirectToPage', 'incidencias');
+            window.location.reload();
+        };
+        pageTitle.appendChild(refreshBtn);
+    }
+}
+
+// Exponer función globalmente
+window.updateRefreshButton = updateRefreshButton;
 
 function dibujarIncidencias(data, isOffline) {
     const container = document.getElementById('incidents-list-container');
