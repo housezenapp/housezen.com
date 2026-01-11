@@ -125,11 +125,25 @@ function setupVisibilityListener() {
 
     document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && authInitialized && wasHidden) {
-            console.log('%c👁️ Pestaña visible de nuevo', 'background: #E67E22; color: white; padding: 4px 8px; border-radius: 4px;');
+            console.log('%c👁️ Pestaña visible de nuevo - Cerrando sesión automáticamente', 'background: #E67E22; color: white; padding: 4px 8px; border-radius: 4px;');
 
-            // IMPORTANTE: Recargar la página si estuvo oculta
-            // Esto reinicia el cliente de Supabase y evita problemas de bloqueo
-            console.log('%c🔄 Recargando página para reiniciar conexión...', 'color: #3498DB;');
+            // Cerrar sesión automáticamente cuando vuelves a la pestaña
+            // Esto asegura que se recupere la conexión con Supabase
+            console.log('%c🚪 Cerrando sesión...', 'color: #E74C3C;');
+            
+            // Limpiar storage inmediatamente
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Intentar cerrar sesión en Supabase sin esperar (fire and forget)
+            if (window._supabase) {
+                window._supabase.auth.signOut().catch(err => {
+                    console.log('%c⚠️ Error al cerrar sesión en Supabase (ignorado):', 'color: orange;', err.message);
+                });
+            }
+
+            // Recargar la página para que el usuario vuelva a iniciar sesión
+            console.log('%c🔄 Recargando página...', 'color: #3498DB;');
             window.location.reload();
 
         } else if (document.hidden) {
